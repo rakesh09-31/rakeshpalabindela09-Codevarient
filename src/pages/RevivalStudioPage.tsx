@@ -14,10 +14,12 @@ import {
   Compass,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { Project, AIChatMessage, Priority } from '../types';
+import { apiClient } from '../services/apiClient';
+import { Project, AIChatMessage, Priority, ProjectStatus } from '../types';
+import { Button, Badge } from '../components/ui';
 
 export function RevivalStudioPage() {
-  const { projects, addTask } = useApp();
+  const { projects, addTask, changeProjectStatus, updateProject } = useApp();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -88,7 +90,7 @@ export function RevivalStudioPage() {
     },
   ];
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string, toolId?: string) => {
     const text = textToSend || inputPrompt;
     if (!text.trim() || !selectedProject) return;
 
@@ -103,11 +105,16 @@ export function RevivalStudioPage() {
     if (!textToSend) setInputPrompt('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const response = generateStudioResponse(text, selectedProject);
+    try {
+      const mode = (toolId as any) || undefined;
+      const response = await apiClient.askAiAssistant(selectedProject.id, text, mode);
       setChatMessages((prev) => [...prev, response]);
+    } catch {
+      const fallback = generateStudioResponse(text, selectedProject);
+      setChatMessages((prev) => [...prev, fallback]);
+    } finally {
       setIsTyping(false);
-    }, 850);
+    }
   };
 
   const handleApplyAction = (msgId: string, sugId: string) => {
@@ -125,6 +132,18 @@ export function RevivalStudioPage() {
                     weight: Number(s.data.weight) || 4,
                     status: 'todo',
                   });
+                } else if (s.type === 'change-status') {
+                  changeProjectStatus(
+                    selectedProject.id,
+                    (s.data.status as ProjectStatus) || 'active',
+                    'Applied Studio revival path'
+                  );
+                } else if (s.type === 'update-field' && s.data.field && s.data.value) {
+                  updateProject(
+                    selectedProject.id,
+                    { [String(s.data.field)]: s.data.value },
+                    'Applied Studio recommendation'
+                  );
                 }
                 return { ...s, applied: true };
               }
@@ -138,35 +157,38 @@ export function RevivalStudioPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+            <h1
+              className="text-2xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               AI Revival Studio
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal-light mt-1">
+          <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
             Autonomous project diagnostic engine: unblock architectures, reframe MVPs, and generate revival roadmaps.
           </p>
         </div>
 
         {/* Project Selector Bar */}
-        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-gray-green-border shadow-xs">
-          <span className="text-xs font-semibold text-charcoal-light whitespace-nowrap">
+        <div className="flex items-center gap-2 bg-white dark:bg-[var(--color-surface)] px-3.5 py-2 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 shadow-2xs">
+          <span className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] whitespace-nowrap font-mono">
             Active Context:
           </span>
           <select
             value={selectedProject?.id || ''}
             onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="text-xs sm:text-sm font-semibold text-charcoal bg-transparent focus:outline-none cursor-pointer"
+            className="text-xs sm:text-sm font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] bg-transparent focus:outline-none cursor-pointer"
           >
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p.id} value={p.id} className="bg-white dark:bg-[var(--color-surface)] text-[var(--color-text)] dark:text-[var(--color-text)]">
                 {p.title} ({p.status} - {p.progress}%)
               </option>
             ))}
@@ -177,20 +199,20 @@ export function RevivalStudioPage() {
       {/* Main Studio Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Main Chat Workspace */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-green-border/60 flex flex-col h-[650px] shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex flex-col h-[650px] shadow-2xs overflow-hidden">
           {/* Top Context Subheader */}
           {selectedProject && (
-            <div className="p-4 border-b border-gray-green-border/30 bg-ivory-warm/60 flex flex-wrap items-center justify-between gap-2">
+            <div className="p-4 border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-charcoal">{selectedProject.title}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-ivory border border-gray-green-border capitalize text-charcoal-light">
-                  {selectedProject.status}
+                <span className="text-xs font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{selectedProject.title}</span>
+                <Badge status={selectedProject.status} size="sm" />
+                <span className="text-xs font-mono font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">
+                  {selectedProject.progress}% complete
                 </span>
-                <span className="text-[10px] text-forest font-bold">{selectedProject.progress}% complete</span>
               </div>
               <button
                 onClick={() => navigate(`/projects/${selectedProject.id}`)}
-                className="text-xs text-mint hover:text-forest font-medium flex items-center gap-1 transition-colors"
+                className="text-xs text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white font-medium flex items-center gap-1 transition-colors cursor-pointer"
               >
                 Open Project Workspace <ArrowRight className="w-3 h-3" />
               </button>
@@ -207,35 +229,32 @@ export function RevivalStudioPage() {
                 <div
                   className={`max-w-[88%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-purple-900 text-white rounded-br-none shadow-xs'
-                      : 'bg-ivory border border-gray-green-border/60 text-charcoal rounded-bl-none shadow-2xs'
+                      ? 'bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white rounded-br-none shadow-2xs'
+                      : 'bg-white text-[var(--color-text)] dark:bg-[var(--color-surface)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border)]/80 rounded-bl-none shadow-2xs'
                   }`}
                 >
                   <div className="whitespace-pre-line">{msg.content}</div>
 
                   {/* Suggestions with Real Apply Button */}
                   {msg.suggestions && msg.suggestions.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-green-border/40 space-y-2">
-                      <span className="text-[11px] font-bold text-purple-950 block">
+                    <div className="mt-3.5 pt-3.5 border-t border-[var(--color-border)] dark:border-[var(--color-border)] space-y-2">
+                      <span className="text-[11px] font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block font-mono uppercase tracking-wider">
                         Actionable Plan Items:
                       </span>
                       {msg.suggestions.map((sug) => (
                         <div
                           key={sug.id}
-                          className="p-3 rounded-xl bg-white border border-purple-200/80 flex items-center justify-between gap-2 shadow-2xs"
+                          className="p-3 rounded-xl bg-[var(--color-accent-soft)] dark:bg-[var(--color-accent-soft)] border border-[var(--color-accent)] dark:border-[#522927] flex items-center justify-between gap-3 shadow-2xs"
                         >
                           <div className="text-xs">
-                            <span className="font-bold text-charcoal block">{sug.label}</span>
-                            <span className="text-charcoal-light text-[11px]">{sug.description}</span>
+                            <span className="font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block">{sug.label}</span>
+                            <span className="text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] text-[11px]">{sug.description}</span>
                           </div>
-                          <button
+                          <Button
+                            size="sm"
+                            variant={sug.applied ? 'outline' : 'primary'}
                             disabled={sug.applied}
                             onClick={() => handleApplyAction(msg.id, sug.id)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                              sug.applied
-                                ? 'bg-mint-pale text-forest cursor-default'
-                                : 'bg-purple-700 text-white hover:bg-purple-800 shadow-xs'
-                            }`}
                           >
                             {sug.applied ? (
                               <>
@@ -244,26 +263,26 @@ export function RevivalStudioPage() {
                             ) : (
                               'Add to Project'
                             )}
-                          </button>
+                          </Button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] text-charcoal-light mt-1 px-1">
+                <span className="text-[10px] font-mono text-[var(--color-text-muted)] mt-1 px-1">
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             ))}
             {isTyping && (
-              <div className="flex items-center gap-2 text-xs text-charcoal-light italic py-2">
-                <Bot className="w-4 h-4 animate-spin text-purple-700" /> Synthesizing revival roadmap...
+              <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] italic py-2">
+                <Bot className="w-4 h-4 animate-spin text-[var(--color-text)] dark:text-[var(--color-text)]" /> Synthesizing revival roadmap...
               </div>
             )}
           </div>
 
           {/* Chat Input */}
-          <div className="p-3.5 border-t border-gray-green-border/40 bg-white">
+          <div className="p-3.5 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-white dark:bg-[var(--color-surface)]">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -275,24 +294,28 @@ export function RevivalStudioPage() {
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 placeholder="Ask how to solve rate limits, cut dependencies, or pivot features..."
-                className="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-green-border bg-ivory focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200"
+                className="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-border)] dark:focus:border-indigo-400"
               />
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                size="sm"
                 disabled={!inputPrompt.trim()}
-                className="p-2.5 rounded-xl bg-purple-700 text-white hover:bg-purple-800 transition-colors disabled:opacity-50 shadow-xs"
               >
                 <Send className="w-4 h-4" />
-              </button>
+              </Button>
             </form>
           </div>
         </div>
 
         {/* Right Col: Studio Capabilities & Project Context */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-green-border/60 p-5 space-y-3">
-            <h3 className="text-sm font-bold text-charcoal flex items-center gap-1.5" style={{ fontFamily: 'var(--font-display)' }}>
-              <Zap className="w-4 h-4 text-purple-700" /> Revival Capabilities
+        <div className="space-y-5">
+          <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-5 md:p-6 space-y-3.5 shadow-2xs">
+            <h3
+              className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-1.5 uppercase font-mono tracking-wider"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              <Zap className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Revival Capabilities
             </h3>
             <div className="space-y-2">
               {studioTools.map((tool) => {
@@ -300,15 +323,15 @@ export function RevivalStudioPage() {
                 return (
                   <button
                     key={tool.id}
-                    onClick={() => handleSend(tool.prompt)}
-                    className="w-full text-left p-3 rounded-xl bg-ivory hover:bg-lavender-light/30 border border-gray-green-border/40 transition-all group flex items-start gap-2.5"
+                    onClick={() => handleSend(tool.prompt, tool.id)}
+                    className="w-full text-left p-3 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 hover:bg-[var(--color-brand-soft)]/60 dark:hover:bg-[var(--color-brand)]/50 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 transition-all group flex items-start gap-3 cursor-pointer"
                   >
-                    <Icon className="w-4 h-4 text-purple-700 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                    <Icon className="w-4 h-4 text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
                     <div>
-                      <span className="text-xs font-bold text-charcoal group-hover:text-purple-900 block">
+                      <span className="text-xs font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block">
                         {tool.title}
                       </span>
-                      <span className="text-[11px] text-charcoal-light leading-snug block">
+                      <span className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] leading-snug block mt-0.5">
                         {tool.desc}
                       </span>
                     </div>
@@ -319,29 +342,36 @@ export function RevivalStudioPage() {
           </div>
 
           {selectedProject && (
-            <div className="bg-white rounded-2xl border border-gray-green-border/60 p-5 space-y-3 text-xs">
-              <h3 className="text-sm font-semibold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+            <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-5 md:p-6 space-y-3.5 text-xs shadow-2xs">
+              <h3
+                className="text-sm font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] uppercase font-mono tracking-wider"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
                 Diagnostic Snapshot
               </h3>
               <div className="space-y-2">
-                <div className="flex justify-between py-1 border-b border-gray-green-border/30">
-                  <span className="text-charcoal-light">Status:</span>
-                  <span className="font-semibold capitalize text-charcoal">{selectedProject.status}</span>
+                <div className="flex justify-between py-1.5 border-b border-[var(--color-border)] dark:border-[var(--color-border)]/60">
+                  <span className="text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">Status:</span>
+                  <span className="font-semibold capitalize text-[var(--color-text)] dark:text-[var(--color-text)]">{selectedProject.status}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-green-border/30">
-                  <span className="text-charcoal-light">Blockers Logged:</span>
-                  <span className={`font-semibold ${selectedProject.technicalBlockers.length > 0 ? 'text-rose' : 'text-forest'}`}>
+                <div className="flex justify-between py-1.5 border-b border-[var(--color-border)] dark:border-[var(--color-border)]/60">
+                  <span className="text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">Blockers Logged:</span>
+                  <span className="font-mono font-semibold text-[var(--color-text)] dark:text-[var(--color-text)]">
                     {selectedProject.technicalBlockers.length} issues
                   </span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-gray-green-border/30">
-                  <span className="text-charcoal-light">Milestones:</span>
-                  <span className="font-semibold text-charcoal">{selectedProject.milestones.length} defined</span>
+                <div className="flex justify-between py-1.5 border-b border-[var(--color-border)] dark:border-[var(--color-border)]/60">
+                  <span className="text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">Milestones:</span>
+                  <span className="font-mono font-semibold text-[var(--color-text)] dark:text-[var(--color-text)]">
+                    {selectedProject.milestones.length} defined
+                  </span>
                 </div>
                 {selectedProject.technicalBlockers.length > 0 && (
-                  <div className="pt-1">
-                    <span className="text-charcoal-light block mb-1">Primary Blocker:</span>
-                    <span className="text-rose font-medium bg-rose-light/20 p-2 rounded-lg block">
+                  <div className="pt-2">
+                    <span className="text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1 font-mono uppercase text-[10px]">
+                      Primary Blocker:
+                    </span>
+                    <span className="text-[var(--color-text)] dark:text-[var(--color-text)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 p-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] block text-xs">
                       {selectedProject.technicalBlockers[0]}
                     </span>
                   </div>

@@ -13,11 +13,11 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Sprout,
+  Archive,
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
-const navItems = [
+export const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/projects', label: 'My Projects', icon: FolderOpen },
   { path: '/revival-studio', label: 'Revival Studio', icon: Sparkles, badge: 'AI' },
@@ -30,133 +30,129 @@ const navItems = [
 ];
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar, projects } = useApp();
+  const { sidebarCollapsed, toggleSidebar } = useApp();
   const location = useLocation();
 
   return (
     <motion.aside
-      animate={{ width: sidebarCollapsed ? 72 : 260 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 h-screen bg-white border-r border-gray-green-border/60 z-40 flex flex-col shadow-sm"
+      animate={{ width: sidebarCollapsed ? 76 : 248 }}
+      transition={{ duration: 0.16, ease: 'easeInOut' }}
+      className="fixed left-0 top-0 h-screen bg-[var(--color-sidebar)] border-r border-[var(--color-border)] z-40 flex flex-col transition-colors"
+      style={{ width: sidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)' }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-gray-green-border/40">
-        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-forest flex items-center justify-center shadow-xs">
-          <Sprout className="w-5 h-5 text-mint-light" />
+      {/* Brand Header */}
+      <div className="flex items-center gap-3 px-4 h-[68px] border-b border-[var(--color-border)] shrink-0">
+        <div className="w-[36px] h-[36px] rounded-[var(--radius-md)] bg-[var(--color-brand)] text-[var(--color-brand-contrast)] flex items-center justify-center shrink-0 shadow-2xs">
+          <Archive className="w-4.5 h-4.5 stroke-[2.2]" />
         </div>
+
         <AnimatePresence>
           {!sidebarCollapsed && (
             <motion.div
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 'auto' }}
               exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.14 }}
               className="overflow-hidden whitespace-nowrap"
             >
-              <h1 className="text-base font-bold text-forest" style={{ fontFamily: 'var(--font-display)' }}>
+              <h1
+                className="text-sm font-bold text-[var(--color-text)] tracking-tight leading-none"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
                 Project Graveyard
               </h1>
-              <span className="text-[10px] text-charcoal-light tracking-wide block -mt-0.5">
-                Revive Unfinished Ideas
+              <span className="text-[11px] text-[var(--color-text-muted)] block mt-1 font-normal leading-none">
+                Digital Idea Archive
               </span>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* New Project Button */}
-      <div className="px-3 mt-4 mb-2">
+      {/* Primary Action: New Project */}
+      <div className="p-3">
         <NavLink to="/projects/new">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className={`w-full flex items-center gap-2 rounded-xl font-semibold transition-colors shadow-xs
+          <button
+            className={`w-full h-[44px] flex items-center rounded-[var(--radius-md)] font-medium text-sm transition-all duration-150 cursor-pointer shadow-2xs select-none
+              bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]
               ${
                 sidebarCollapsed
-                  ? 'justify-center p-2.5 bg-forest text-white hover:bg-forest-light'
-                  : 'px-4 py-2.5 bg-forest text-white hover:bg-forest-light'
+                  ? 'justify-center p-2'
+                  : 'px-3.5 gap-2.5'
               }`}
+            title="Create and record a new project"
           >
-            <Plus className="w-4.5 h-4.5 flex-shrink-0" />
-            <AnimatePresence>
-              {!sidebarCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="text-xs sm:text-sm overflow-hidden whitespace-nowrap"
-                >
-                  New Project
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
+            <Plus className="w-4.5 h-4.5 shrink-0" />
+            {!sidebarCollapsed && <span className="truncate">New Project</span>}
+          </button>
         </NavLink>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin">
+      {/* Nav Menu */}
+      <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto scrollbar-thin">
         {navItems.map(({ path, label, icon: Icon, badge }) => {
           const isActive = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+
           return (
-            <NavLink key={path} to={path}>
-              <motion.div
-                whileHover={{ x: 2 }}
-                className={`flex items-center gap-3 rounded-xl transition-all duration-200 relative
-                  ${sidebarCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'}
-                  ${
-                    isActive
-                      ? 'bg-mint-pale text-forest font-semibold shadow-2xs'
-                      : 'text-charcoal-light hover:bg-ivory-warm hover:text-charcoal'
-                  }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-active"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-forest rounded-r-full"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <Icon className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-forest' : ''}`} />
-                <AnimatePresence>
-                  {!sidebarCollapsed && (
-                    <motion.div
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="flex-1 flex items-center justify-between overflow-hidden whitespace-nowrap"
-                    >
-                      <span className="text-xs sm:text-sm">{label}</span>
-                      {badge && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-700">
-                          {badge}
-                        </span>
-                      )}
-                      {label === 'My Projects' && (
-                        <span className="text-[10px] font-semibold text-charcoal-light">
-                          {projects.length}
-                        </span>
-                      )}
-                    </motion.div>
+            <NavLink
+              key={path}
+              to={path}
+              className={`
+                group relative flex items-center h-[42px] rounded-[var(--radius-md)] text-sm font-medium transition-colors duration-150 cursor-pointer select-none
+                ${sidebarCollapsed ? 'justify-center px-2' : 'px-3 gap-3'}
+                ${
+                  isActive
+                    ? 'bg-[var(--color-nav-selected)] text-[var(--color-brand)] font-semibold'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+                }
+              `}
+              title={sidebarCollapsed ? label : undefined}
+            >
+              {/* 3px Brand Indicator */}
+              {isActive && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[var(--color-brand)]" />
+              )}
+
+              <Icon
+                className={`w-[18px] h-[18px] shrink-0 ${
+                  isActive
+                    ? 'text-[var(--color-brand)]'
+                    : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'
+                }`}
+              />
+
+              {!sidebarCollapsed && (
+                <div className="flex items-center justify-between flex-1 truncate">
+                  <span className="truncate">{label}</span>
+                  {badge && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-[var(--color-surface-subtle)] text-[var(--color-brand)] font-bold">
+                      {badge}
+                    </span>
                   )}
-                </AnimatePresence>
-              </motion.div>
+                </div>
+              )}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Collapse Toggle */}
-      <button
-        onClick={toggleSidebar}
-        className="mx-3 mb-4 p-2 rounded-xl border border-gray-green-border/60 text-charcoal-light hover:bg-ivory-warm transition-colors flex items-center justify-center"
-      >
-        {sidebarCollapsed ? (
-          <ChevronRight className="w-4 h-4" />
-        ) : (
-          <ChevronLeft className="w-4 h-4" />
-        )}
-      </button>
+      {/* Collapse Toggle Footer */}
+      <div className="p-3 border-t border-[var(--color-border)] shrink-0">
+        <button
+          onClick={toggleSidebar}
+          className="w-full h-[38px] flex items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer text-xs"
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <div className="flex items-center gap-2">
+              <ChevronLeft className="w-4 h-4" />
+              <span className="text-xs font-medium">Collapse menu</span>
+            </div>
+          )}
+        </button>
+      </div>
     </motion.aside>
   );
 }

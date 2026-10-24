@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
   hint?: string;
@@ -15,7 +15,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="text-sm font-medium text-charcoal-light"
+            className="text-sm font-medium text-[var(--color-text)] tracking-tight"
           >
             {label}
           </label>
@@ -25,16 +25,16 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           id={textareaId}
           rows={rows}
           className={`
-            w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-charcoal
-            placeholder:text-charcoal-light/50
+            w-full rounded-[var(--radius-md)] border bg-[var(--color-surface)] px-3.5 py-2.5 text-sm text-[var(--color-text)]
+            placeholder:text-[var(--color-text-muted)]
             transition-colors duration-150
-            focus:outline-none focus:ring-2
+            focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20
             disabled:opacity-50 disabled:cursor-not-allowed
             resize-y
             ${
               error
-                ? 'border-rose focus:border-rose focus:ring-rose/20'
-                : 'border-gray-green-border focus:border-mint focus:ring-mint/20'
+                ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20'
+                : 'border-[var(--color-border)] focus:border-[var(--color-focus)]'
             }
             ${className}
           `}
@@ -45,12 +45,12 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p id={`${textareaId}-error`} className="text-xs text-rose">
+          <p id={`${textareaId}-error`} className="text-xs text-[var(--color-danger)] font-medium">
             {error}
           </p>
         )}
         {!error && hint && (
-          <p id={`${textareaId}-hint`} className="text-xs text-charcoal-light/70">
+          <p id={`${textareaId}-hint`} className="text-xs text-[var(--color-text-muted)]">
             {hint}
           </p>
         )}
@@ -60,3 +60,4 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 
 Textarea.displayName = 'Textarea';
+export default Textarea;

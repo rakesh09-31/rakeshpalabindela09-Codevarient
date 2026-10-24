@@ -9,7 +9,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { Avatar, Input, Textarea, ConfirmDialog, Github } from '../components/ui';
+import { Avatar, Input, Textarea, ConfirmDialog, Github, Button } from '../components/ui';
 
 export function SettingsPage() {
   const { userProfile, updateUserProfile, resetAllData } = useApp();
@@ -53,47 +53,54 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-ivory-warm border border-gray-green-border flex items-center justify-center text-charcoal">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white flex items-center justify-center">
             <SettingsIcon className="w-5 h-5" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1
+            className="text-2xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             Settings & Profile
           </h1>
         </div>
-        <p className="text-xs sm:text-sm text-charcoal-light mt-1">
+        <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
           Manage your creator profile, notification channels, storage preferences, and demo environments.
         </p>
       </div>
 
       {savedSuccess && (
-        <div className="p-3 bg-mint-pale border border-mint text-forest text-xs sm:text-sm rounded-xl flex items-center gap-2">
-          <Check className="w-4 h-4" /> Preferences saved successfully!
+        <div className="p-3.5 bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border)] text-[var(--color-text)] dark:text-[var(--color-text)] text-xs sm:text-sm rounded-2xl flex items-center gap-2 font-mono">
+          <Check className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Preferences saved successfully.
         </div>
       )}
 
       {/* Profile Form */}
-      <form onSubmit={handleSaveProfile} className="bg-white rounded-3xl border border-gray-green-border/60 p-6 md:p-8 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-gray-green-border/40 pb-4">
+      <form onSubmit={handleSaveProfile} className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-8 shadow-2xs space-y-6">
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-5">
           <div className="flex items-center gap-3">
             <Avatar name={name} size="lg" />
             <div>
-              <h2 className="text-base font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+              <h2
+                className="text-base font-bold text-[var(--color-text)] dark:text-[var(--color-text)]"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
                 {name}
               </h2>
-              <p className="text-xs text-charcoal-light">{email}</p>
+              <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] font-mono">{email}</p>
             </div>
           </div>
 
-          <button
+          <Button
             type="submit"
-            className="flex items-center gap-2 px-4 py-2 bg-forest text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-forest-light shadow-sm"
+            variant="primary"
+            size="sm"
           >
             <Save className="w-4 h-4" /> Save Changes
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -125,13 +132,13 @@ export function SettingsPage() {
           />
 
           <div>
-            <label className="text-xs font-semibold text-charcoal-light block mb-1">
+            <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
               Availability
             </label>
             <select
               value={availability}
               onChange={(e) => setAvailability(e.target.value as any)}
-              className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+              className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-[var(--color-border)] dark:focus:border-indigo-400 cursor-pointer"
             >
               <option value="full-time">Full-Time Builder</option>
               <option value="part-time">Part-Time / Evenings</option>
@@ -141,48 +148,50 @@ export function SettingsPage() {
         </div>
 
         {/* Notifications */}
-        <div className="pt-4 border-t border-gray-green-border/40 space-y-3">
-          <h3 className="text-sm font-bold text-charcoal flex items-center gap-2">
-            <Bell className="w-4 h-4 text-forest" /> Notification Preferences
+        <div className="pt-5 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80 space-y-3.5">
+          <h3
+            className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2 font-mono uppercase tracking-wider"
+          >
+            <Bell className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Notification Preferences
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-ivory border cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 cursor-pointer text-[var(--color-text)] dark:text-[var(--color-text)]">
               <input
                 type="checkbox"
                 checked={notifUpdates}
                 onChange={(e) => setNotifUpdates(e.target.checked)}
-                className="w-4 h-4 text-forest rounded"
+                className="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded cursor-pointer"
               />
               <span>Project Milestone Updates</span>
             </label>
 
-            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-ivory border cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 cursor-pointer text-[var(--color-text)] dark:text-[var(--color-text)]">
               <input
                 type="checkbox"
                 checked={notifAI}
                 onChange={(e) => setNotifAI(e.target.checked)}
-                className="w-4 h-4 text-forest rounded"
+                className="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded cursor-pointer"
               />
               <span>AI Revival Recommendations</span>
             </label>
 
-            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-ivory border cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 cursor-pointer text-[var(--color-text)] dark:text-[var(--color-text)]">
               <input
                 type="checkbox"
                 checked={notifReminders}
                 onChange={(e) => setNotifReminders(e.target.checked)}
-                className="w-4 h-4 text-forest rounded"
+                className="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded cursor-pointer"
               />
               <span>Upcoming Nudges & Reminders</span>
             </label>
 
-            <label className="flex items-center gap-2.5 p-3 rounded-xl bg-ivory border cursor-pointer">
+            <label className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 cursor-pointer text-[var(--color-text)] dark:text-[var(--color-text)]">
               <input
                 type="checkbox"
                 checked={notifTeam}
                 onChange={(e) => setNotifTeam(e.target.checked)}
-                className="w-4 h-4 text-forest rounded"
+                className="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded cursor-pointer"
               />
               <span>Team & Contributor Events</span>
             </label>
@@ -190,34 +199,36 @@ export function SettingsPage() {
         </div>
 
         {/* Integrations */}
-        <div className="pt-4 border-t border-gray-green-border/40 space-y-3">
-          <h3 className="text-sm font-bold text-charcoal flex items-center gap-2">
-            <Database className="w-4 h-4 text-teal" /> Integrations & Local State
+        <div className="pt-5 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80 space-y-3.5">
+          <h3
+            className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2 font-mono uppercase tracking-wider"
+          >
+            <Database className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Integrations & Local State
           </h3>
 
-          <div className="space-y-2">
-            <div className="p-3.5 rounded-xl bg-ivory border border-gray-green-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Github className="w-5 h-5 text-charcoal" />
+          <div className="space-y-2.5">
+            <div className="p-4 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Github className="w-5 h-5 text-[var(--color-text)] dark:text-[var(--color-text)]" />
                 <div>
-                  <span className="text-xs font-bold text-charcoal block">GitHub Connectivity</span>
-                  <span className="text-[11px] text-charcoal-light">Simulated local mock integration active</span>
+                  <span className="text-xs font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block">GitHub Connectivity</span>
+                  <span className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">Simulated local mock integration active</span>
                 </div>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-mint-pale text-forest">
+              <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-[var(--color-brand)] text-white dark:bg-[var(--color-surface-subtle)] dark:text-[var(--color-text)]">
                 Connected
               </span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-ivory border border-gray-green-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Database className="w-5 h-5 text-charcoal" />
+            <div className="p-4 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Database className="w-5 h-5 text-[var(--color-text)] dark:text-[var(--color-text)]" />
                 <div>
-                  <span className="text-xs font-bold text-charcoal block">Local Persistence</span>
-                  <span className="text-[11px] text-charcoal-light">Preserving your garden state in browser localStorage</span>
+                  <span className="text-xs font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block">Local Persistence</span>
+                  <span className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">Preserving your garden state in SQLite / browser</span>
                 </div>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-mint-pale text-forest">
+              <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-md bg-[var(--color-brand)] text-white dark:bg-[var(--color-surface-subtle)] dark:text-[var(--color-text)]">
                 Operational
               </span>
             </div>
@@ -225,25 +236,27 @@ export function SettingsPage() {
         </div>
 
         {/* Reset Danger Zone */}
-        <div className="pt-4 border-t border-gray-green-border/40 space-y-3">
-          <h3 className="text-sm font-bold text-rose flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose" /> Reset Demo Environment
+        <div className="pt-5 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80 space-y-3.5">
+          <h3 className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] uppercase tracking-wider font-mono flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Reset Demo Environment
           </h3>
-          <div className="p-4 rounded-2xl bg-rose-light/20 border border-rose-light/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-xs font-bold text-rose block">Reset All Demo Data</span>
-              <span className="text-[11px] text-charcoal-light">
+              <span className="text-xs font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block">Reset All Demo Data</span>
+              <span className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
                 Restore the initial 6 projects, team, reminders, and clear custom modifications.
               </span>
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="danger"
+              size="sm"
               onClick={() => setShowResetConfirm(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose text-white text-xs font-semibold hover:bg-rose/90 self-start sm:self-center"
+              className="self-start sm:self-center"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Re-seed Demo Data
-            </button>
+            </Button>
           </div>
         </div>
       </form>

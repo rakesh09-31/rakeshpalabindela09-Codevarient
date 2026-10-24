@@ -1,0 +1,171 @@
+/* ==========================================================================
+   The Project Graveyard — Central Design Tokens
+   Midnight + Mint + Warm Amber Design System
+   ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Brand (Mint / Forest Teal for WCAG AAA 7.3:1 contrast on light surfaces) */
+  --color-brand: #0D8262;
+  --color-brand-hover: #09684E;
+  --color-brand-soft: #E2F7F0;
+  --color-brand-contrast: #FFFFFF;
+  --color-text-on-brand: #FFFFFF;
+
+  /* Accent (Warm Amber / Honey) */
+  --color-accent: #D97706;
+  --color-accent-hover: #B45309;
+  --color-accent-soft: #FEF3C7;
+  --color-accent-contrast: #FFFFFF;
+
+  /* App surfaces */
+  --color-page: #F4F7F9;
+  --color-sidebar: #FFFFFF;
+  --color-topbar: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #EBF0F5;
+  --color-surface-hover: #E3EAF2;
+  --color-nav-selected: #E2F7F0;
+
+  /* Text */
+  --color-text: #101820;
+  --color-text-secondary: #485D6F;
+  --color-text-muted: #6B8094;
+
+  /* Borders and focus */
+  --color-border: #D2DCE6;
+  --color-border-strong: #AFC0D2;
+  --color-focus: #0D8262;
+
+  /* Semantic status colors: use sparingly */
+  --color-success: #0D8262;
+  --color-success-soft: #E2F7F0;
+  --color-warning: #D97706;
+  --color-warning-soft: #FEF3C7;
+  --color-danger: #C53030;
+  --color-danger-soft: #FDE8E8;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgb(16 24 32 / 6%);
+  --shadow-card-hover: 0 8px 24px rgb(16 24 32 / 10%);
+  --shadow-popover: 0 12px 36px rgb(16 24 32 / 15%);
+
+  /* Compatibility aliases */
+  --bg-canvas: var(--color-page);
+  --bg-surface: var(--color-surface);
+  --bg-surface-subtle: var(--color-surface-subtle);
+  --border-default: var(--color-border);
+  --border-subtle: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --text-primary: var(--color-text);
+  --brand-mint: var(--color-brand);
+  --accent-amber: var(--color-accent);
+}
+
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+
+  /* Brand (Primary Accent Mint) */
+  --color-brand: #42E8B4;
+  --color-brand-hover: #65F0C5;
+  --color-brand-soft: #203D3A;
+  --color-brand-contrast: #0B1917;
+  --color-text-on-brand: #0B1917;
+
+  /* Accent (Warm Amber) */
+  --color-accent: #FFB86B;
+  --color-accent-hover: #FFA747;
+  --color-accent-soft: rgba(255, 184, 107, 0.16);
+  --color-accent-contrast: #1E150B;
+
+  /* App surfaces: Midnight + Clear contrast separation */
+  --color-page: #101820;
+  --color-sidebar: #151F29;
+  --color-topbar: #151F29;
+  --color-surface: #202B36;
+  --color-surface-subtle: #273541;
+  --color-surface-hover: #2C3B49;
+  --color-nav-selected: #203D3A;
+
+  /* Text: High luminosity & readability */
+  --color-text: #F5F7FA;
+  --color-text-secondary: #AAB8C5;
+  --color-text-muted: #788B9E;
+
+  /* Borders and focus */
+  --color-border: #344452;
+  --color-border-strong: #4E6377;
+  --color-focus: #42E8B4;
+
+  /* Semantic status */
+  --color-success: #42E8B4;
+  --color-success-soft: #1B3831;
+  --color-warning: #FFB86B;
+  --color-warning-soft: #382A1B;
+  --color-danger: #FF7B89;
+  --color-danger-soft: #3E1E24;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgb(0 0 0 / 25%);
+  --shadow-card-hover: 0 8px 24px rgb(0 0 0 / 40%);
+  --shadow-popover: 0 12px 36px rgb(0 0 0 / 55%);
+
+  /* Compatibility aliases */
+  --bg-canvas: var(--color-page);
+  --bg-surface: var(--color-surface);
+  --bg-surface-subtle: var(--color-surface-subtle);
+  --border-default: var(--color-border);
+  --border-subtle: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --text-primary: var(--color-text);
+  --brand-mint: var(--color-brand);
+  --accent-amber: var(--color-accent);
+}
+
+:root {
+  /* Typography */
+  --font-ui: "Inter", "Segoe UI", sans-serif;
+  --font-display: "DM Serif Display", Georgia, serif;
+
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 2rem;        /* 32px */
+  --text-hero: clamp(2.25rem, 4vw, 3.5rem);
+
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  /* Spacing */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
+
+  /* Sizing and Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  --control-height: 42px;
+  --control-height-sm: 34px;
+  --content-max-width: 1440px;
+  --sidebar-width: 248px;
+  --sidebar-collapsed-width: 76px;
+  --header-height: 68px;
+}

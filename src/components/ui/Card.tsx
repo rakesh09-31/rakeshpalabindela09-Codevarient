@@ -4,18 +4,22 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   hoverable?: boolean;
+  clickable?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
   className = '',
   hoverable = false,
+  clickable = false,
   ...props
 }) => {
+  const isInteractive = hoverable || clickable;
+
   return (
     <div
-      className={`bg-white rounded-2xl border border-stone-200/80 shadow-xs ${
-        hoverable ? 'hover:shadow-md hover:border-emerald-300 transition-all duration-200 cursor-pointer' : ''
+      className={`card ${
+        isInteractive ? 'card-clickable' : ''
       } ${className}`}
       {...props}
     >
@@ -23,3 +27,5 @@ export const Card: React.FC<CardProps> = ({
     </div>
   );
 };
+
+export default Card;

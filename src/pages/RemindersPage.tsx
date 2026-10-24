@@ -10,7 +10,7 @@ import {
   Repeat,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { Badge, Modal, Input, Textarea } from '../components/ui';
+import { Badge, Modal, Input, Textarea, Button } from '../components/ui';
 
 export function RemindersPage() {
   const { reminders, projects, createReminder, cancelReminder, deleteReminder } = useApp();
@@ -51,33 +51,38 @@ export function RemindersPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-amber-warm flex items-center justify-center text-amber">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white flex items-center justify-center">
               <Bell className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+            <h1
+              className="text-2xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               Project Reminders & Pulses
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal-light mt-1">
+          <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
             Keep dormant ideas from slipping away. Schedule nudges to revisit blockers, benchmark models, or review pull requests.
           </p>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-forest text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-forest-light shadow-sm self-start sm:self-center"
+          className="self-start sm:self-center"
         >
           <Plus className="w-4 h-4" /> Schedule Reminder
-        </button>
+        </Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-green-border/40 pb-2">
+      <div className="bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 rounded-2xl p-1.5 flex items-center gap-1.5 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 max-w-md">
         {[
           { id: 'upcoming', label: 'Upcoming Nudges', count: reminders.filter((r) => r.status === 'upcoming').length },
           { id: 'completed', label: 'Completed', count: reminders.filter((r) => r.status === 'completed').length },
@@ -88,14 +93,20 @@ export function RemindersPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-forest text-white shadow-xs'
-                  : 'text-charcoal-light hover:bg-ivory-warm'
+                  ? 'bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white font-semibold shadow-2xs'
+                  : 'text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white'
               }`}
             >
               <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 rounded-full ${isActive ? 'bg-forest-light text-white' : 'bg-gray-green-light/40 text-charcoal'}`}>
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                  isActive
+                    ? 'bg-[var(--color-surface-subtle)] text-white dark:bg-zinc-200 dark:text-[var(--color-text)]'
+                    : 'bg-zinc-200 dark:bg-zinc-700 text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)]'
+                }`}
+              >
                 {tab.count}
               </span>
             </button>
@@ -105,10 +116,10 @@ export function RemindersPage() {
 
       {/* Reminder List */}
       {filteredReminders.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-gray-green-border/60 p-12 text-center">
-          <Clock className="w-10 h-10 text-gray-green-light mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-charcoal">No {activeTab} reminders</h3>
-          <p className="text-xs text-charcoal-light mt-1">
+        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-12 text-center shadow-2xs">
+          <Clock className="w-10 h-10 text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-[var(--color-text)] dark:text-[var(--color-text)]">No {activeTab} reminders</h3>
+          <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1 max-w-sm mx-auto">
             Schedule a gentle check-in to keep yourself accountable to your garden ideas.
           </p>
         </div>
@@ -117,25 +128,25 @@ export function RemindersPage() {
           {filteredReminders.map((rem) => (
             <div
               key={rem.id}
-              className="bg-white rounded-2xl border border-gray-green-border/60 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-5 md:p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-ivory-warm flex items-center justify-center text-forest mt-0.5">
+              <div className="flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 flex items-center justify-center text-[var(--color-text)] dark:text-[var(--color-text)] mt-0.5">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-charcoal">{rem.title}</h3>
+                    <h3 className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{rem.title}</h3>
                     {rem.projectTitle && (
                       <Badge variant="tech" size="sm">
                         {rem.projectTitle}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-charcoal-light mt-1 leading-relaxed">{rem.message}</p>
-                  <div className="flex items-center gap-3 text-[11px] text-charcoal-light mt-2">
+                  <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1 leading-relaxed">{rem.message}</p>
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-[var(--color-text-muted)] mt-2.5">
                     <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-forest" />
+                      <Clock className="w-3.5 h-3.5 text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)]" />
                       {new Date(rem.dateTime).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -155,16 +166,17 @@ export function RemindersPage() {
 
               <div className="flex items-center gap-2 self-end sm:self-center">
                 {rem.status === 'upcoming' && (
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => cancelReminder(rem.id)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-green-border text-xs text-charcoal-light hover:text-charcoal hover:bg-ivory-warm"
                   >
                     Dismiss
-                  </button>
+                  </Button>
                 )}
                 <button
                   onClick={() => deleteReminder(rem.id)}
-                  className="p-1.5 text-charcoal-light hover:text-rose"
+                  className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white transition-colors cursor-pointer"
                   title="Delete Reminder"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -183,16 +195,16 @@ export function RemindersPage() {
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-charcoal-light block mb-1">
+            <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
               Select Target Project
             </label>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+              className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-[var(--color-border)] dark:focus:border-indigo-400 cursor-pointer"
             >
               {projects.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={p.id} className="bg-white dark:bg-[var(--color-surface)]">
                   {p.title} ({p.status})
                 </option>
               ))}
@@ -217,25 +229,25 @@ export function RemindersPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Date & Time
               </label>
               <input
                 type="datetime-local"
                 value={dateTime}
                 onChange={(e) => setDateTime(e.target.value)}
-                className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-green-border bg-ivory"
+                className="w-full text-xs px-3 py-2 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)]"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Recurrence
               </label>
               <select
                 value={recurrence}
                 onChange={(e) => setRecurrence(e.target.value as any)}
-                className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-green-border bg-ivory"
+                className="w-full text-xs px-3 py-2 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)]"
               >
                 <option value="once">One-time</option>
                 <option value="daily">Daily</option>
@@ -245,13 +257,13 @@ export function RemindersPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Delivery Channel
               </label>
               <select
                 value={channel}
                 onChange={(e) => setChannel(e.target.value as any)}
-                className="w-full text-xs px-2.5 py-2 rounded-xl border border-gray-green-border bg-ivory"
+                className="w-full text-xs px-3 py-2 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)]"
               >
                 <option value="in-app">In-App Banner</option>
                 <option value="email">Email Digest</option>
@@ -261,19 +273,21 @@ export function RemindersPage() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowCreateModal(false)}
-              className="px-3.5 py-2 rounded-xl border text-xs"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-forest text-white text-xs font-semibold hover:bg-forest-light"
+              variant="primary"
+              size="sm"
             >
               Set Reminder
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

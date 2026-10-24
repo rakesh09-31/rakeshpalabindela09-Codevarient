@@ -16,11 +16,12 @@ import {
   Check,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { apiClient } from '../services/apiClient';
 import { Project, FusionProposal } from '../types';
-import { Badge } from '../components/ui';
+import { Badge, Button } from '../components/ui';
 
 export function FusionPage() {
-  const { projects, createFusionProposal, approveFusionProposal } = useApp();
+  const { projects, createFusionProposal, approveFusionProposal, refreshProjects } = useApp();
   const navigate = useNavigate();
 
   // Multi-project selection
@@ -43,68 +44,88 @@ export function FusionPage() {
 
   const selectedProjects = projects.filter((p) => selectedIds.includes(p.id));
 
-  // Synthesize Fusion
-  const handleSynthesize = () => {
+  // Synthesize Fusion (Server-side with authorization check)
+  const handleSynthesize = async () => {
     if (selectedProjects.length < 2) return;
     setIsSynthesizing(true);
     setCurrentProposal(null);
 
-    setTimeout(() => {
+    try {
+      const proposal = await apiClient.generateFusion(selectedIds);
+      setCurrentProposal(proposal);
+      setEditTitle(proposal.proposedTitle);
+      setEditGoal(proposal.proposedGoal);
+    } catch {
       const proposal = generateFusionAnalysis(selectedProjects);
       const saved = createFusionProposal(proposal);
       setCurrentProposal(saved);
       setEditTitle(saved.proposedTitle);
       setEditGoal(saved.proposedGoal);
+    } finally {
       setIsSynthesizing(false);
-    }, 1200);
+    }
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!currentProposal) return;
-    const { newProject } = approveFusionProposal(currentProposal.id);
-    navigate(`/projects/${newProject.id}`);
+    try {
+      const result = await apiClient.approveFusion(currentProposal.id, editTitle, editGoal);
+      refreshProjects();
+      navigate(`/projects/${result.newProject.id}`);
+    } catch {
+      const { newProject } = approveFusionProposal(currentProposal.id);
+      refreshProjects();
+      navigate(`/projects/${newProject.id}`);
+    }
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-teal-100 flex items-center justify-center text-teal">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white flex items-center justify-center">
               <Merge className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+            <h1
+              className="text-2xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               AI Project Fusion
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal-light mt-1">
+          <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
             Cross-pollinate compatible unfinished projects into a unified, high-conviction concept.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-charcoal-light bg-ivory-warm px-3 py-1.5 rounded-xl border border-gray-green-border">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono font-medium text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 px-3 py-1.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)]">
             {selectedIds.length} projects selected
           </span>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             disabled={selectedIds.length < 2 || isSynthesizing}
             onClick={handleSynthesize}
-            className="flex items-center gap-2 px-5 py-2.5 bg-forest text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-forest-light transition-all disabled:opacity-50 shadow-sm"
           >
-            <Sparkles className="w-4 h-4 text-mint-light" />
+            <Sparkles className="w-4 h-4" />
             {isSynthesizing ? 'Synthesizing Fusion...' : 'Synthesize Fusion Proposal'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Step 1: Project Selection Matrix */}
-      <div className="bg-white rounded-3xl border border-gray-green-border/60 p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-7 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2
+            className="text-base font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             <span>Step 1: Choose 2 or more projects to fuse</span>
           </h2>
-          <span className="text-xs text-charcoal-light">
+          <span className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
             Tip: Try pairing <strong>CodeMentor AI</strong> + <strong>StudySync</strong>, or <strong>EcoTrack</strong> + <strong>GreenRoute</strong>.
           </span>
         </div>
@@ -118,29 +139,32 @@ export function FusionPage() {
                 onClick={() => toggleSelectProject(project.id)}
                 className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                   isSelected
-                    ? 'border-forest bg-mint-pale/30 shadow-xs'
-                    : 'border-gray-green-border/60 hover:border-gray-green bg-white'
+                    ? 'border-zinc-900 bg-[var(--color-surface-subtle)] dark:border-[var(--color-border)] dark:bg-[var(--color-surface-subtle)] shadow-2xs'
+                    : 'border-[var(--color-border)] dark:border-[var(--color-border)] hover:border-indigo-300 dark:hover:border-indigo-700/60 bg-white dark:bg-[var(--color-surface)]'
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-ivory border border-gray-green-border uppercase text-charcoal text-[10px]">
-                      {project.status}
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge status={project.status} size="sm" />
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => {}}
-                      className="w-4 h-4 text-forest rounded cursor-pointer"
+                      className="w-4 h-4 accent-zinc-900 dark:accent-zinc-100 rounded cursor-pointer"
                     />
                   </div>
-                  <h3 className="text-sm font-bold text-charcoal">{project.title}</h3>
-                  <p className="text-xs text-charcoal-light line-clamp-2 mt-1">{project.summary}</p>
+                  <h3 className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{project.title}</h3>
+                  <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] line-clamp-2 mt-1 leading-relaxed">
+                    {project.summary}
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap gap-1 mt-3 pt-2 border-t border-gray-green-border/30">
+                <div className="flex flex-wrap gap-1 mt-3 pt-2.5 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80">
                   {project.languages.concat(project.frameworks).slice(0, 3).map((tech) => (
-                    <span key={tech} className="text-[10px] px-1.5 py-0.5 rounded bg-ivory text-charcoal-light">
+                    <span
+                      key={tech}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)]"
+                    >
                       {tech}
                     </span>
                   ))}
@@ -153,12 +177,15 @@ export function FusionPage() {
 
       {/* Synthesis Loading Animation */}
       {isSynthesizing && (
-        <div className="bg-white rounded-3xl border border-teal/40 p-12 text-center space-y-4 shadow-sm animate-pulse">
-          <Sparkles className="w-12 h-12 text-teal mx-auto animate-spin" />
-          <h3 className="text-lg font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)] p-12 text-center space-y-4 shadow-2xs animate-pulse">
+          <Sparkles className="w-10 h-10 text-[var(--color-text)] dark:text-[var(--color-text)] mx-auto animate-spin" />
+          <h3
+            className="text-lg font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             AI Fusion Engine Analyzing Architectural Synergy...
           </h3>
-          <p className="text-xs sm:text-sm text-charcoal-light max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] max-w-md mx-auto leading-relaxed">
             Mapping shared tech capabilities, identifying complementary feature vectors, and calculating risk trade-offs between {selectedProjects.map((p) => p.title).join(' and ')}.
           </p>
         </div>
@@ -169,117 +196,134 @@ export function FusionPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl border border-gray-green-border/60 p-6 md:p-8 shadow-sm space-y-8"
+          className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-8 shadow-2xs space-y-8"
         >
           {/* Canvas Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-gray-green-border/40">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80">
             <div>
               <div className="flex items-center gap-2">
                 <Badge variant="status-revived" size="sm">
                   Synthesized Proposal Ready
                 </Badge>
-                <span className="text-xs text-charcoal-light">Simulated AI Architecture Output</span>
+                <span className="text-xs font-mono text-[var(--color-text-muted)]">Simulated AI Architecture Output</span>
               </div>
 
               {isEditingProposal ? (
-                <div className="mt-2 space-y-2">
+                <div className="mt-3 space-y-2">
                   <input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="text-xl md:text-2xl font-bold text-charcoal px-3 py-1.5 rounded-xl border border-gray-green-border w-full"
+                    className="text-xl md:text-2xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] px-3.5 py-2 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 w-full focus:outline-none"
                   />
                   <input
                     value={editGoal}
                     onChange={(e) => setEditGoal(e.target.value)}
-                    className="text-xs sm:text-sm text-charcoal-light px-3 py-1.5 rounded-xl border border-gray-green-border w-full"
+                    className="text-xs sm:text-sm text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] px-3.5 py-2 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 w-full focus:outline-none"
                   />
                 </div>
               ) : (
-                <div className="mt-2">
-                  <h2 className="text-xl md:text-3xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+                <div className="mt-2.5">
+                  <h2
+                    className="text-xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
                     {editTitle || currentProposal.proposedTitle}
                   </h2>
-                  <p className="text-sm text-charcoal-light mt-1">
+                  <p className="text-sm text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)] mt-1 leading-relaxed">
                     {editGoal || currentProposal.proposedGoal}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2 self-start lg:self-center">
-              <button
+            <div className="flex items-center gap-2.5 self-start lg:self-center">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setIsEditingProposal(!isEditingProposal)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-green-border text-xs sm:text-sm font-medium hover:bg-ivory-warm text-charcoal"
               >
                 <Edit2 className="w-3.5 h-3.5" />
                 {isEditingProposal ? 'Done Editing' : 'Edit Proposal'}
-              </button>
+              </Button>
 
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleApprove}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-forest text-white text-xs sm:text-sm font-semibold hover:bg-forest-light transition-all shadow-sm"
               >
                 <Check className="w-4 h-4" />
                 Approve & Plant Fused Project
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Visual Source Nodes Connection */}
-          <div className="p-5 rounded-2xl bg-ivory border border-gray-green-border/60">
-            <span className="text-[11px] font-bold text-forest uppercase tracking-wider block mb-3">
+          <div className="p-5 md:p-6 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80">
+            <span className="text-[11px] font-bold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] uppercase tracking-wider block mb-4 font-mono">
               Fused Lineage & Source Dependencies
             </span>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
               {selectedProjects.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-4">
-                  <div className="p-4 rounded-xl bg-white border border-gray-green-border shadow-2xs max-w-xs text-left">
-                    <span className="text-[10px] text-charcoal-light block">Parent Source {idx + 1}</span>
-                    <h4 className="text-sm font-bold text-charcoal">{p.title}</h4>
-                    <p className="text-[11px] text-charcoal-light truncate">{p.summary}</p>
+                  <div className="p-4 rounded-2xl bg-white dark:bg-[var(--color-surface)] border border-[var(--color-border)] dark:border-[var(--color-border)] shadow-2xs max-w-xs text-left">
+                    <span className="text-[10px] font-mono text-[var(--color-text-muted)] block">Parent Source {idx + 1}</span>
+                    <h4 className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{p.title}</h4>
+                    <p className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] truncate">{p.summary}</p>
                   </div>
                   {idx < selectedProjects.length - 1 && (
-                    <div className="w-8 h-8 rounded-full bg-forest text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                    <div className="w-8 h-8 rounded-full bg-[var(--color-brand)] text-white dark:bg-[var(--color-surface-subtle)] dark:text-[var(--color-text)] flex items-center justify-center text-xs font-mono font-bold shadow-2xs">
                       +
                     </div>
                   )}
                 </div>
               ))}
 
-              <ArrowRight className="w-6 h-6 text-mint mx-2 hidden sm:block" />
+              <ArrowRight className="w-5 h-5 text-[var(--color-text-muted)] mx-2 hidden sm:block" />
 
-              <div className="p-4 rounded-xl bg-forest text-white shadow-xs max-w-xs text-left">
-                <span className="text-[10px] text-mint-light block">Fused Concept</span>
+              <div className="p-4 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-surface-subtle)] dark:text-[var(--color-text)] shadow-2xs max-w-xs text-left">
+                <span className="text-[10px] font-mono text-[var(--color-text-muted)] block">Fused Concept</span>
                 <h4 className="text-sm font-bold truncate">{editTitle || currentProposal.proposedTitle}</h4>
-                <p className="text-[11px] text-ivory-warm truncate">New Single Cohesive App</p>
+                <p className="text-[11px] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] truncate">New Single Cohesive App</p>
               </div>
             </div>
           </div>
 
           {/* Shared Capabilities & Complementary Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-5 rounded-2xl border border-gray-green-border/60 bg-white space-y-3">
-              <h3 className="text-sm font-bold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
-                <Layers className="w-4 h-4 text-forest" /> Shared Capabilities & Overlaps
+            <div className="p-5 md:p-6 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-white dark:bg-[var(--color-surface)] space-y-3 shadow-2xs">
+              <h3
+                className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <Layers className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Shared Capabilities & Overlaps
               </h3>
               <div className="space-y-2">
                 {currentProposal.sharedCapabilities.map((cap, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-charcoal bg-ivory p-2.5 rounded-lg border border-gray-green-border/30">
-                    <CheckCircle2 className="w-4 h-4 text-forest flex-shrink-0 mt-0.5" />
+                  <div
+                    key={i}
+                    className="flex items-start gap-2.5 text-xs text-[var(--color-text)] dark:text-[var(--color-text)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 p-3 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)]/60"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)] flex-shrink-0 mt-0.5" />
                     <span>{cap}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl border border-gray-green-border/60 bg-white space-y-3">
-              <h3 className="text-sm font-bold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
-                <Sparkles className="w-4 h-4 text-teal" /> Complementary Feature Vectors
+            <div className="p-5 md:p-6 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-white dark:bg-[var(--color-surface)] space-y-3 shadow-2xs">
+              <h3
+                className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <Sparkles className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Complementary Feature Vectors
               </h3>
               <div className="space-y-2">
                 {currentProposal.complementaryFeatures.map((feat, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-charcoal bg-paleblue-light/30 p-2.5 rounded-lg border border-paleblue/50">
-                    <Plus className="w-4 h-4 text-teal flex-shrink-0 mt-0.5" />
+                  <div
+                    key={i}
+                    className="flex items-start gap-2.5 text-xs text-[var(--color-text)] dark:text-[var(--color-text)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 p-3 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)]/60"
+                  >
+                    <Plus className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)] flex-shrink-0 mt-0.5" />
                     <span>{feat}</span>
                   </div>
                 ))}
@@ -289,9 +333,12 @@ export function FusionPage() {
 
           {/* Recommended Tech Stack & Milestones */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-5 rounded-2xl border border-gray-green-border/60 bg-white space-y-3">
-              <h3 className="text-sm font-bold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
-                <Code2 className="w-4 h-4 text-purple-700" /> Unified Technology Stack
+            <div className="p-5 md:p-6 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-white dark:bg-[var(--color-surface)] space-y-3 shadow-2xs">
+              <h3
+                className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <Code2 className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Unified Technology Stack
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {currentProposal.proposedStack.map((tech) => (
@@ -300,20 +347,26 @@ export function FusionPage() {
                   </Badge>
                 ))}
               </div>
-              <div className="pt-2 text-xs text-charcoal-light">
-                <span className="font-semibold text-charcoal block mb-1">Architecture Rationale:</span>
+              <div className="pt-2 text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] leading-relaxed">
+                <span className="font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1">Architecture Rationale:</span>
                 Synthesizes the frontend ergonomics of React with low-cost server action endpoints to avoid redundant infrastructure bills.
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl border border-gray-green-border/60 bg-white space-y-3">
-              <h3 className="text-sm font-bold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
-                <Shield className="w-4 h-4 text-amber" /> Risk & Tradeoff Assessment
+            <div className="p-5 md:p-6 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-white dark:bg-[var(--color-surface)] space-y-3 shadow-2xs">
+              <h3
+                className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <Shield className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Risk & Tradeoff Assessment
               </h3>
               <div className="space-y-2">
                 {currentProposal.risks.map((risk, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-amber bg-amber-warm/40 p-2.5 rounded-lg border border-amber/30">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div
+                    key={i}
+                    className="flex items-start gap-2.5 text-xs text-[var(--color-text)] dark:text-[var(--color-text)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 p-3 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)] flex-shrink-0 mt-0.5" />
                     <span>{risk}</span>
                   </div>
                 ))}
@@ -322,32 +375,41 @@ export function FusionPage() {
           </div>
 
           {/* Proposed Fused Roadmap */}
-          <div className="p-5 rounded-2xl border border-gray-green-border/60 bg-white space-y-4">
-            <h3 className="text-sm font-bold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
-              <Workflow className="w-4 h-4 text-forest" /> Proposed Fused Sprint Milestones
+          <div className="p-5 md:p-6 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-white dark:bg-[var(--color-surface)] space-y-4 shadow-2xs">
+            <h3
+              className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              <Workflow className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Proposed Fused Sprint Milestones
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentProposal.proposedMilestones.map((m, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-ivory border border-gray-green-border/40 space-y-1">
-                  <span className="text-[10px] font-bold text-forest uppercase">Milestone {idx + 1}</span>
-                  <h4 className="text-xs sm:text-sm font-bold text-charcoal">{m.title}</h4>
-                  <p className="text-xs text-charcoal-light">{m.description}</p>
+                <div
+                  key={idx}
+                  className="p-4 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/60 space-y-1"
+                >
+                  <span className="text-[10px] font-mono font-bold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] uppercase">
+                    Milestone {idx + 1}
+                  </span>
+                  <h4 className="text-xs sm:text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{m.title}</h4>
+                  <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] leading-relaxed">{m.description}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Canvas Bottom Action */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-green-border/40">
-            <span className="text-xs text-charcoal-light">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80">
+            <span className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
               Approving creates a real new project in your garden and appends lineage records to source timelines.
             </span>
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleApprove}
-              className="px-6 py-2.5 rounded-xl bg-forest text-white text-xs sm:text-sm font-semibold hover:bg-forest-light shadow-sm"
             >
               Approve & Create Fused Project
-            </button>
+            </Button>
           </div>
         </motion.div>
       )}

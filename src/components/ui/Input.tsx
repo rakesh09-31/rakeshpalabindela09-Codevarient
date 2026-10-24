@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
@@ -16,14 +16,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-charcoal-light"
+            className="text-sm font-medium text-[var(--color-text)] tracking-tight"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-light/60 pointer-events-none">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none">
               {icon}
             </span>
           )}
@@ -31,16 +31,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={`
-              w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-charcoal
-              placeholder:text-charcoal-light/50
+              w-full h-[42px] rounded-[var(--radius-md)] border bg-[var(--color-surface)] px-3.5 py-2 text-sm text-[var(--color-text)]
+              placeholder:text-[var(--color-text-muted)]
               transition-colors duration-150
-              focus:outline-none focus:ring-2
+              focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20
               disabled:opacity-50 disabled:cursor-not-allowed
               ${icon ? 'pl-10' : ''}
               ${
                 error
-                  ? 'border-rose focus:border-rose focus:ring-rose/20'
-                  : 'border-gray-green-border focus:border-mint focus:ring-mint/20'
+                  ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20'
+                  : 'border-[var(--color-border)] focus:border-[var(--color-focus)]'
               }
               ${className}
             `}
@@ -52,12 +52,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <p id={`${inputId}-error`} className="text-xs text-rose">
+          <p id={`${inputId}-error`} className="text-xs text-[var(--color-danger)] font-medium">
             {error}
           </p>
         )}
         {!error && hint && (
-          <p id={`${inputId}-hint`} className="text-xs text-charcoal-light/70">
+          <p id={`${inputId}-hint`} className="text-xs text-[var(--color-text-muted)]">
             {hint}
           </p>
         )}
@@ -67,3 +67,4 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
+export default Input;

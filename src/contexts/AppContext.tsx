@@ -11,6 +11,7 @@ import {
   Task,
 } from '../types';
 import { storageService } from '../services/storageService';
+import { apiClient } from '../services/apiClient';
 
 interface AppContextType {
   projects: Project[];
@@ -20,7 +21,8 @@ interface AppContextType {
   fusionProposals: FusionProposal[];
   userProfile: UserProfile;
   sidebarCollapsed: boolean;
-  initialized: boolean;
+  mobileDrawerOpen: boolean;
+  theme: 'light' | 'dark';
 
   // Projects
   createProject: (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'progress'>) => Project;
@@ -69,6 +71,12 @@ interface AppContextType {
   refreshAll: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
+  setMobileDrawerOpen: (open: boolean) => void;
+  toggleTheme: () => void;
+  initialized: boolean;
+  initError: string | null;
+  isSyncing: boolean;
+  reloadAll: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -81,17 +89,86 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [fusionProposals, setFusionProposals] = useState<FusionProposal[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>({} as UserProfile);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('graveyard_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch {
+      // fallback
+    }
+    return 'light';
+  });
 
-  const reloadAll = useCallback(() => {
-    storageService.initialize();
-    setProjects(storageService.getProjects());
-    setTeams(storageService.getTeams());
-    setReminders(storageService.getReminders());
-    setNotifications(storageService.getNotifications());
-    setFusionProposals(storageService.getFusionProposals());
-    setUserProfile(storageService.getUserProfile());
-    setInitialized(true);
+  useEffect(() => {
+    try {
+      localStorage.setItem('graveyard_theme', theme);
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  const [initError, setInitError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const reloadAll = useCallback(async () => {
+    try {
+      setInitError(null);
+      storageService.initialize();
+      setProjects(storageService.getProjects());
+      setTeams(storageService.getTeams());
+      setReminders(storageService.getReminders());
+      setNotifications(storageService.getNotifications());
+      setFusionProposals(storageService.getFusionProposals());
+      setUserProfile(storageService.getUserProfile());
+      setInitialized(true);
+
+      // Asynchronously synchronize with SQLite server database
+      setIsSyncing(true);
+      try {
+        const [serverProjects, serverTeams, serverReminders] = await Promise.allSettled([
+          apiClient.getProjects(),
+          apiClient.getTeams(),
+          apiClient.getReminders(),
+        ]);
+
+        if (serverProjects.status === 'fulfilled' && serverProjects.value && serverProjects.value.length > 0) {
+          setProjects(serverProjects.value);
+          storageService.saveProjects(serverProjects.value);
+        }
+        if (serverTeams.status === 'fulfilled' && serverTeams.value && serverTeams.value.length > 0) {
+          setTeams(serverTeams.value);
+          storageService.saveTeams(serverTeams.value);
+        }
+        if (serverReminders.status === 'fulfilled' && serverReminders.value && serverReminders.value.length > 0) {
+          setReminders(serverReminders.value);
+          storageService.saveReminders(serverReminders.value);
+        }
+      } catch (syncErr) {
+        console.warn('Backend sync warning (local storage active):', syncErr);
+      } finally {
+        setIsSyncing(false);
+      }
+    } catch (err: unknown) {
+      console.error('App initialization failed:', err);
+      const msg = err instanceof Error ? err.message : 'Unknown storage initialization error';
+      setInitError(msg);
+      setInitialized(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -100,6 +177,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProjects = useCallback(() => {
     setProjects(storageService.getProjects());
+    apiClient.getProjects().then((serverProjects) => {
+      if (serverProjects && serverProjects.length > 0) {
+        setProjects(serverProjects);
+        storageService.saveProjects(serverProjects);
+      }
+    }).catch(() => {});
   }, []);
 
   const refreshAll = useCallback(() => {
@@ -111,6 +194,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'progress'>) => {
       const res = storageService.createProject(data);
       setProjects(storageService.getProjects());
+      apiClient.createProject(res).catch(() => {});
       return res;
     },
     []
@@ -120,6 +204,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (id: string, updates: Partial<Project>, timelineNote?: string) => {
       const res = storageService.updateProject(id, updates, timelineNote);
       setProjects(storageService.getProjects());
+      apiClient.updateProject(id, updates, timelineNote).catch(() => {});
       return res;
     },
     []
@@ -128,17 +213,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteProject = useCallback((id: string) => {
     storageService.deleteProject(id);
     setProjects(storageService.getProjects());
+    apiClient.deleteProject(id).catch(() => {});
   }, []);
 
   const duplicateProject = useCallback((id: string) => {
     const res = storageService.duplicateProject(id);
     setProjects(storageService.getProjects());
+    apiClient.createProject(res).catch(() => {});
     return res;
   }, []);
 
   const changeProjectStatus = useCallback((id: string, status: ProjectStatus, note?: string) => {
     const res = storageService.changeProjectStatus(id, status, note);
     setProjects(storageService.getProjects());
+    apiClient.updateProject(id, { status }, note).catch(() => {});
     return res;
   }, []);
 
@@ -151,6 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ) => {
       const res = storageService.reviveProject(id, path, note, newGoal);
       setProjects(storageService.getProjects());
+      apiClient.reviveProject(id, path, note, newGoal).catch(() => {});
       return res;
     },
     []
@@ -161,6 +250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (projectId: string, milestone: Omit<Milestone, 'id' | 'createdAt' | 'tasks'>) => {
       const res = storageService.addMilestone(projectId, milestone);
       setProjects(storageService.getProjects());
+      apiClient.updateProject(projectId, { milestones: res.milestones }).catch(() => {});
       return res;
     },
     []
@@ -169,6 +259,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteMilestone = useCallback((projectId: string, milestoneId: string) => {
     const res = storageService.deleteMilestone(projectId, milestoneId);
     setProjects(storageService.getProjects());
+    apiClient.updateProject(projectId, { milestones: res.milestones }).catch(() => {});
     return res;
   }, []);
 
@@ -176,6 +267,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (projectId: string, milestoneId: string, task: Omit<Task, 'id' | 'createdAt'>) => {
       const res = storageService.addTask(projectId, milestoneId, task);
       setProjects(storageService.getProjects());
+      apiClient.updateProject(projectId, { milestones: res.milestones }).catch(() => {});
       return res;
     },
     []
@@ -185,6 +277,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (projectId: string, milestoneId: string, taskId: string) => {
       const res = storageService.toggleTaskComplete(projectId, milestoneId, taskId);
       setProjects(storageService.getProjects());
+      apiClient.toggleTask(projectId, milestoneId, taskId).catch(() => {});
       return res;
     },
     []
@@ -303,7 +396,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         fusionProposals,
         userProfile,
         sidebarCollapsed,
+        mobileDrawerOpen,
+        theme,
         initialized,
+        initError,
+        isSyncing,
+        reloadAll,
         createProject,
         updateProject,
         deleteProject,
@@ -333,6 +431,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refreshAll,
         setSidebarCollapsed,
         toggleSidebar,
+        setMobileDrawerOpen,
+        toggleTheme,
       }}
     >
       {children}

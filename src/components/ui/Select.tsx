@@ -1,12 +1,12 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 
-interface SelectOption {
+export interface SelectOption {
   value: string;
   label: string;
 }
 
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
+export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
   label?: string;
   error?: string;
   options: SelectOption[];
@@ -22,7 +22,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="text-sm font-medium text-charcoal-light"
+            className="text-sm font-medium text-[var(--color-text)] tracking-tight"
           >
             {label}
           </label>
@@ -32,16 +32,16 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={`
-              w-full appearance-none rounded-xl border bg-white
-              px-3.5 py-2.5 pr-10 text-sm text-charcoal
+              w-full h-[42px] appearance-none rounded-[var(--radius-md)] border bg-[var(--color-surface)]
+              px-3.5 py-2 pr-10 text-sm text-[var(--color-text)]
               transition-colors duration-150
-              focus:outline-none focus:ring-2
+              focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20
               disabled:opacity-50 disabled:cursor-not-allowed
               cursor-pointer
               ${
                 error
-                  ? 'border-rose focus:border-rose focus:ring-rose/20'
-                  : 'border-gray-green-border focus:border-mint focus:ring-mint/20'
+                  ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20'
+                  : 'border-[var(--color-border)] focus:border-[var(--color-focus)]'
               }
               ${className}
             `}
@@ -54,18 +54,19 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             )}
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <option key={opt.value} value={opt.value} className="bg-[var(--color-surface)] text-[var(--color-text)]">
                 {opt.label}
               </option>
             ))}
           </select>
-          <ChevronDown
-            size={16}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-light/60 pointer-events-none"
-          />
+          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+            <ChevronDown className="h-4 w-4" />
+          </span>
         </div>
         {error && (
-          <p className="text-xs text-rose">{error}</p>
+          <p className="text-xs text-[var(--color-danger)] font-medium">
+            {error}
+          </p>
         )}
       </div>
     );
@@ -73,3 +74,4 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 );
 
 Select.displayName = 'Select';
+export default Select;

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Save,
@@ -8,13 +7,12 @@ import {
   Code2,
   TrendingUp,
   AlertTriangle,
-  Plus,
   X,
   CheckCircle2,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { Project, ProjectStatus, ProjectVisibility } from '../types';
-import { Input, Textarea, Select } from '../components/ui';
+import { ProjectStatus, ProjectVisibility } from '../types';
+import { Input, Textarea, Button } from '../components/ui';
 
 export default function ProjectFormPage() {
   const { id } = useParams<{ id?: string }>();
@@ -53,7 +51,7 @@ export default function ProjectFormPage() {
 
   // Progress state
   const [status, setStatus] = useState<ProjectStatus>('active');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [plannedCompletionDate, setPlannedCompletionDate] = useState('');
   const [completedFeatures, setCompletedFeatures] = useState<string[]>([]);
   const [newCompletedFeature, setNewCompletedFeature] = useState('');
@@ -171,8 +169,8 @@ export default function ProjectFormPage() {
           tasks: [
             {
               id: `t-init-1`,
-              title: 'Initialize repository structure & basic layout',
-              status: 'completed',
+              title: 'Define scope & set up development environment',
+              status: 'todo',
               priority: 'high',
               weight: 3,
               createdAt: new Date().toISOString(),
@@ -233,30 +231,35 @@ export default function ProjectFormPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Top Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-charcoal-light hover:text-forest"
+          className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:text-[var(--color-text-muted)] dark:hover:text-[var(--color-text)] transition-colors cursor-pointer self-start"
         >
           <ArrowLeft className="w-4 h-4" /> Cancel & Return
         </button>
 
-        <h1 className="text-xl md:text-2xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1
+          className="text-xl md:text-2xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           {isEditing ? `Edit: ${existingProject?.title || 'Project'}` : 'Plant New Project'}
         </h1>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={handleSubmit}
-          className="flex items-center gap-2 px-4 py-2 bg-forest text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-forest-light shadow-sm"
+          className="self-end sm:self-auto"
         >
           <Save className="w-4 h-4" /> Save Project Memory
-        </button>
+        </Button>
       </div>
 
       {/* Multi-Section Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-green-border/60 p-1.5 grid grid-cols-2 sm:grid-cols-4 gap-1 shadow-xs">
+      <div className="bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 rounded-2xl p-1.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 border border-[var(--color-border)] dark:border-[var(--color-border)]/80">
         {[
           { id: 'basics', label: '1. Basics & Spark', icon: Layers },
           { id: 'tech', label: '2. Tech Stack', icon: Code2 },
@@ -268,11 +271,12 @@ export default function ProjectFormPage() {
           return (
             <button
               key={sec.id}
+              type="button"
               onClick={() => setActiveSection(sec.id as any)}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-forest text-white shadow-xs'
-                  : 'text-charcoal-light hover:bg-ivory-warm hover:text-charcoal'
+                  ? 'bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white font-semibold shadow-2xs'
+                  : 'text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -283,11 +287,11 @@ export default function ProjectFormPage() {
       </div>
 
       {/* Form Container */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-gray-green-border/60 p-6 md:p-8 shadow-sm space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-8 shadow-2xs space-y-6">
         {/* ================= SECTION 1: BASICS ================= */}
         {activeSection === 'basics' && (
           <div className="space-y-5">
-            <h2 className="text-base font-semibold text-charcoal border-b border-gray-green-border/40 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
               Project Identity & Vision
             </h2>
 
@@ -311,13 +315,13 @@ export default function ProjectFormPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   Category / Domain
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 >
                   <option value="Web App">Web App</option>
                   <option value="Mobile App">Mobile App</option>
@@ -332,13 +336,13 @@ export default function ProjectFormPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   Visibility
                 </label>
                 <select
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value as ProjectVisibility)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 >
                   <option value="private">Private (Only You)</option>
                   <option value="team">Team (Collaborators)</option>
@@ -373,20 +377,20 @@ export default function ProjectFormPage() {
 
             {/* Tags */}
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1.5">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Tags
               </label>
               <div className="flex flex-wrap items-center gap-1.5 mb-2">
                 {tags.map((t) => (
                   <span
                     key={t}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-paleblue-light text-teal flex items-center gap-1"
+                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
                   >
                     #{t}
                     <button
                       type="button"
                       onClick={() => removePill(tags, setTags, t)}
-                      className="hover:text-rose"
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -404,15 +408,16 @@ export default function ProjectFormPage() {
                     }
                   }}
                   placeholder="Add a tag and press Enter"
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory w-64"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => addPill(tags, setTags, newTag, setNewTag)}
-                  className="px-3 py-1.5 rounded-xl border text-xs text-charcoal"
                 >
                   Add
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -421,20 +426,27 @@ export default function ProjectFormPage() {
         {/* ================= SECTION 2: TECH STACK ================= */}
         {activeSection === 'tech' && (
           <div className="space-y-6">
-            <h2 className="text-base font-semibold text-charcoal border-b border-gray-green-border/40 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
               Technology Stack & URLs
             </h2>
 
             {/* Languages */}
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Programming Languages
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {languages.map((l) => (
-                  <span key={l} className="text-xs px-2.5 py-1 rounded-lg bg-ivory-warm border border-gray-green-border flex items-center gap-1">
+                  <span
+                    key={l}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
+                  >
                     {l}
-                    <button type="button" onClick={() => removePill(languages, setLanguages, l)}>
+                    <button
+                      type="button"
+                      onClick={() => removePill(languages, setLanguages, l)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -445,28 +457,36 @@ export default function ProjectFormPage() {
                   value={newLanguage}
                   onChange={(e) => setNewLanguage(e.target.value)}
                   placeholder="e.g. TypeScript, Python, Rust"
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory w-64"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => addPill(languages, setLanguages, newLanguage, setNewLanguage)}
-                  className="px-3 py-1.5 rounded-xl border text-xs"
                 >
                   Add
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Frameworks */}
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Frameworks
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {frameworks.map((f) => (
-                  <span key={f} className="text-xs px-2.5 py-1 rounded-lg bg-ivory-warm border border-gray-green-border flex items-center gap-1">
+                  <span
+                    key={f}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
+                  >
                     {f}
-                    <button type="button" onClick={() => removePill(frameworks, setFrameworks, f)}>
+                    <button
+                      type="button"
+                      onClick={() => removePill(frameworks, setFrameworks, f)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -477,29 +497,39 @@ export default function ProjectFormPage() {
                   value={newFramework}
                   onChange={(e) => setNewFramework(e.target.value)}
                   placeholder="e.g. React, Next.js, FastAPI"
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory w-64"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => addPill(frameworks, setFrameworks, newFramework, setNewFramework)}
-                  className="px-3 py-1.5 rounded-xl border text-xs"
                 >
                   Add
-                </button>
+                </Button>
               </div>
             </div>
 
-            {/* Libraries & APIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Libraries & APIs & Tools */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   Libraries & Dependencies
                 </label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {libraries.map((lib) => (
-                    <span key={lib} className="text-xs px-2 py-0.5 rounded bg-ivory border flex items-center gap-1">
+                    <span
+                      key={lib}
+                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] flex items-center gap-1 font-mono"
+                    >
                       {lib}
-                      <button type="button" onClick={() => removePill(libraries, setLibraries, lib)}><X className="w-3 h-3" /></button>
+                      <button
+                        type="button"
+                        onClick={() => removePill(libraries, setLibraries, lib)}
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -508,21 +538,37 @@ export default function ProjectFormPage() {
                     value={newLibrary}
                     onChange={(e) => setNewLibrary(e.target.value)}
                     placeholder="e.g. Tailwind, Zustand"
-                    className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory w-full"
+                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                   />
-                  <button type="button" onClick={() => addPill(libraries, setLibraries, newLibrary, setNewLibrary)} className="px-3 py-1.5 rounded-xl border text-xs">Add</button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addPill(libraries, setLibraries, newLibrary, setNewLibrary)}
+                  >
+                    Add
+                  </Button>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   APIs & External Services
                 </label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {apis.map((a) => (
-                    <span key={a} className="text-xs px-2 py-0.5 rounded bg-ivory border flex items-center gap-1">
+                    <span
+                      key={a}
+                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] flex items-center gap-1 font-mono"
+                    >
                       {a}
-                      <button type="button" onClick={() => removePill(apis, setApis, a)}><X className="w-3 h-3" /></button>
+                      <button
+                        type="button"
+                        onClick={() => removePill(apis, setApis, a)}
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -531,9 +577,55 @@ export default function ProjectFormPage() {
                     value={newApi}
                     onChange={(e) => setNewApi(e.target.value)}
                     placeholder="e.g. OpenAI API, Stripe"
-                    className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory w-full"
+                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                   />
-                  <button type="button" onClick={() => addPill(apis, setApis, newApi, setNewApi)} className="px-3 py-1.5 rounded-xl border text-xs">Add</button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addPill(apis, setApis, newApi, setNewApi)}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                  Tools, Utilities & Dependencies
+                </label>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {tools.map((t) => (
+                    <span
+                      key={t}
+                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] flex items-center gap-1 font-mono"
+                    >
+                      {t}
+                      <button
+                        type="button"
+                        onClick={() => removePill(tools, setTools, t)}
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2 max-w-md">
+                  <input
+                    value={newTool}
+                    onChange={(e) => setNewTool(e.target.value)}
+                    placeholder="e.g. Vite, Docker, Turborepo"
+                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addPill(tools, setTools, newTool, setNewTool)}
+                  >
+                    Add
+                  </Button>
                 </div>
               </div>
             </div>
@@ -565,19 +657,19 @@ export default function ProjectFormPage() {
         {/* ================= SECTION 3: PROGRESS & SCOPE ================= */}
         {activeSection === 'progress' && (
           <div className="space-y-6">
-            <h2 className="text-base font-semibold text-charcoal border-b border-gray-green-border/40 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
               Scope & Feature Roadmap
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   Status
                 </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 >
                   <option value="active">Active</option>
                   <option value="paused">Paused</option>
@@ -589,40 +681,51 @@ export default function ProjectFormPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   Start Date
                 </label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-charcoal-light block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                   Target Completion Date
                 </label>
                 <input
                   type="date"
                   value={plannedCompletionDate}
                   onChange={(e) => setPlannedCompletionDate(e.target.value)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-gray-green-border bg-ivory focus:outline-none"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
               </div>
             </div>
 
             {/* Completed Features */}
             <div>
-              <label className="text-xs font-semibold text-forest flex items-center gap-1 mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Completed Features
               </label>
-              <div className="space-y-1 mb-2">
+              <div className="space-y-1.5 mb-2">
                 {completedFeatures.map((f) => (
-                  <div key={f} className="text-xs p-2 rounded-lg bg-mint-pale/50 border border-mint/30 flex items-center justify-between">
-                    <span>{f}</span>
-                    <button type="button" onClick={() => removePill(completedFeatures, setCompletedFeatures, f)}><X className="w-3 h-3 text-rose" /></button>
+                  <div
+                    key={f}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-[var(--color-text-muted)]">✓</span> {f}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePill(completedFeatures, setCompletedFeatures, f)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -631,22 +734,40 @@ export default function ProjectFormPage() {
                   value={newCompletedFeature}
                   onChange={(e) => setNewCompletedFeature(e.target.value)}
                   placeholder="Add a completed milestone feature..."
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory flex-1"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button type="button" onClick={() => addPill(completedFeatures, setCompletedFeatures, newCompletedFeature, setNewCompletedFeature)} className="px-3 py-1.5 rounded-xl border text-xs">Add</button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(completedFeatures, setCompletedFeatures, newCompletedFeature, setNewCompletedFeature)}
+                >
+                  Add
+                </Button>
               </div>
             </div>
 
             {/* In-Progress Features */}
             <div>
-              <label className="text-xs font-semibold text-amber block mb-1">
-                In-Progress Features
+              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
+                <span className="font-mono text-xs">❚❚</span> In-Progress Features
               </label>
-              <div className="space-y-1 mb-2">
+              <div className="space-y-1.5 mb-2">
                 {inProgressFeatures.map((f) => (
-                  <div key={f} className="text-xs p-2 rounded-lg bg-amber-warm/40 border border-amber/30 flex items-center justify-between">
-                    <span>{f}</span>
-                    <button type="button" onClick={() => removePill(inProgressFeatures, setInProgressFeatures, f)}><X className="w-3 h-3 text-rose" /></button>
+                  <div
+                    key={f}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] text-[var(--color-text-muted)]">❚❚</span> {f}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePill(inProgressFeatures, setInProgressFeatures, f)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -655,9 +776,58 @@ export default function ProjectFormPage() {
                   value={newInProgressFeature}
                   onChange={(e) => setNewInProgressFeature(e.target.value)}
                   placeholder="Add feature in development..."
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory flex-1"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button type="button" onClick={() => addPill(inProgressFeatures, setInProgressFeatures, newInProgressFeature, setNewInProgressFeature)} className="px-3 py-1.5 rounded-xl border text-xs">Add</button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(inProgressFeatures, setInProgressFeatures, newInProgressFeature, setNewInProgressFeature)}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {/* Planned & Unfinished Features */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
+                <span>+</span> Planned & Unfinished Features
+              </label>
+              <div className="space-y-1.5 mb-2">
+                {plannedFeatures.map((f) => (
+                  <div
+                    key={f}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-[var(--color-text-muted)]">+</span> {f}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePill(plannedFeatures, setPlannedFeatures, f)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newPlannedFeature}
+                  onChange={(e) => setNewPlannedFeature(e.target.value)}
+                  placeholder="Add planned next feature..."
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(plannedFeatures, setPlannedFeatures, newPlannedFeature, setNewPlannedFeature)}
+                >
+                  Add
+                </Button>
               </div>
             </div>
           </div>
@@ -666,7 +836,7 @@ export default function ProjectFormPage() {
         {/* ================= SECTION 4: BLOCKERS & MEMORY ================= */}
         {activeSection === 'memory' && (
           <div className="space-y-6">
-            <h2 className="text-base font-semibold text-charcoal border-b border-gray-green-border/40 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
               Abandonment Reason & Memory Preservation
             </h2>
 
@@ -680,14 +850,23 @@ export default function ProjectFormPage() {
 
             {/* Technical Blockers */}
             <div>
-              <label className="text-xs font-semibold text-rose block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1.5 font-mono uppercase tracking-wider">
                 Technical Blockers
               </label>
-              <div className="space-y-1 mb-2">
+              <div className="space-y-1.5 mb-2">
                 {technicalBlockers.map((b) => (
-                  <div key={b} className="text-xs p-2 rounded-lg bg-rose-light/20 border border-rose-light/40 flex items-center justify-between text-rose">
+                  <div
+                    key={b}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
                     <span>{b}</span>
-                    <button type="button" onClick={() => removePill(technicalBlockers, setTechnicalBlockers, b)}><X className="w-3 h-3 text-rose" /></button>
+                    <button
+                      type="button"
+                      onClick={() => removePill(technicalBlockers, setTechnicalBlockers, b)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -696,22 +875,38 @@ export default function ProjectFormPage() {
                   value={newBlocker}
                   onChange={(e) => setNewBlocker(e.target.value)}
                   placeholder="e.g. Rate limiting on 500-line PRs, or strict NAT traversal..."
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory flex-1"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button type="button" onClick={() => addPill(technicalBlockers, setTechnicalBlockers, newBlocker, setNewBlocker)} className="px-3 py-1.5 rounded-xl border text-xs">Add Blocker</button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(technicalBlockers, setTechnicalBlockers, newBlocker, setNewBlocker)}
+                >
+                  Add Blocker
+                </Button>
               </div>
             </div>
 
             {/* Lessons Learned */}
             <div>
-              <label className="text-xs font-semibold text-charcoal-light block mb-1">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
                 Lessons Learned & Retrospective
               </label>
-              <div className="space-y-1 mb-2">
+              <div className="space-y-1.5 mb-2">
                 {lessonsLearned.map((l) => (
-                  <div key={l} className="text-xs p-2 rounded-lg bg-ivory border flex items-center justify-between">
+                  <div
+                    key={l}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
                     <span>{l}</span>
-                    <button type="button" onClick={() => removePill(lessonsLearned, setLessonsLearned, l)}><X className="w-3 h-3 text-rose" /></button>
+                    <button
+                      type="button"
+                      onClick={() => removePill(lessonsLearned, setLessonsLearned, l)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -720,52 +915,182 @@ export default function ProjectFormPage() {
                   value={newLesson}
                   onChange={(e) => setNewLesson(e.target.value)}
                   placeholder="e.g. Don't use heavy WebRTC mesh for audio-only rooms..."
-                  className="px-3 py-1.5 text-xs rounded-xl border border-gray-green-border bg-ivory flex-1"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
-                <button type="button" onClick={() => addPill(lessonsLearned, setLessonsLearned, newLesson, setNewLesson)} className="px-3 py-1.5 rounded-xl border text-xs">Add Lesson</button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(lessonsLearned, setLessonsLearned, newLesson, setNewLesson)}
+                >
+                  Add Lesson
+                </Button>
+              </div>
+            </div>
+
+            {/* Missing Skills & Resources */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                Missing Skills & Required Resources
+              </label>
+              <div className="space-y-1.5 mb-2">
+                {missingSkills.map((s) => (
+                  <div
+                    key={s}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
+                    <span>{s}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePill(missingSkills, setMissingSkills, s)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newMissingSkill}
+                  onChange={(e) => setNewMissingSkill(e.target.value)}
+                  placeholder="e.g. WebRTC TURN configuration, PyTorch CUDA optimization..."
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(missingSkills, setMissingSkills, newMissingSkill, setNewMissingSkill)}
+                >
+                  Add Skill
+                </Button>
+              </div>
+            </div>
+
+            {/* Known Bugs & Issues */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1.5 font-mono uppercase tracking-wider">
+                Known Bugs & Open Issues
+              </label>
+              <div className="space-y-1.5 mb-2">
+                {knownBugs.map((b) => (
+                  <div
+                    key={b}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
+                    <span>{b}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePill(knownBugs, setKnownBugs, b)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newBug}
+                  onChange={(e) => setNewBug(e.target.value)}
+                  placeholder="e.g. Safari microphone permission deadlock on iOS 17..."
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(knownBugs, setKnownBugs, newBug, setNewBug)}
+                >
+                  Add Bug
+                </Button>
+              </div>
+            </div>
+
+            {/* Recommended Next Steps */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1.5 font-mono uppercase tracking-wider">
+                Recommended Next Steps for Revival
+              </label>
+              <div className="space-y-1.5 mb-2">
+                {nextSteps.map((step) => (
+                  <div
+                    key={step}
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  >
+                    <span>{step}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePill(nextSteps, setNextSteps, step)}
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newNextStep}
+                  onChange={(e) => setNewNextStep(e.target.value)}
+                  placeholder="e.g. Migrate to hosted LiveKit instance, replace AST regex..."
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPill(nextSteps, setNextSteps, newNextStep, setNewNextStep)}
+                >
+                  Add Step
+                </Button>
               </div>
             </div>
           </div>
         )}
 
         {/* Form Bottom Navigation Controls */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-green-border/40">
+        <div className="flex items-center justify-between pt-6 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80">
           <div className="flex gap-2">
             {activeSection !== 'basics' && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   if (activeSection === 'memory') setActiveSection('progress');
                   else if (activeSection === 'progress') setActiveSection('tech');
                   else if (activeSection === 'tech') setActiveSection('basics');
                 }}
-                className="px-4 py-2 rounded-xl border border-gray-green-border text-xs sm:text-sm font-medium hover:bg-ivory-warm"
               >
                 Previous Section
-              </button>
+              </Button>
             )}
           </div>
 
           <div className="flex gap-2">
             {activeSection !== 'memory' ? (
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
                 onClick={() => {
                   if (activeSection === 'basics') setActiveSection('tech');
                   else if (activeSection === 'tech') setActiveSection('progress');
                   else if (activeSection === 'progress') setActiveSection('memory');
                 }}
-                className="px-4 py-2 rounded-xl bg-ivory-warm border border-gray-green-border text-xs sm:text-sm font-semibold hover:bg-gray-green-light/30 text-charcoal"
               >
                 Next Section
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-forest text-white text-xs sm:text-sm font-semibold hover:bg-forest-light shadow-sm"
+                variant="primary"
+                size="sm"
               >
                 Save Project
-              </button>
+              </Button>
             )}
           </div>
         </div>

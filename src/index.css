@@ -1,48 +1,103 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
 
 @theme {
-  --color-ivory: #FDFBF7;
-  --color-ivory-warm: #F8F5EE;
-  --color-ivory-dark: #F0EAE1;
-  --color-mint: #10B981;
-  --color-mint-light: #A7F3D0;
-  --color-mint-pale: #ECFDF5;
-  --color-forest: #14382B;
-  --color-forest-light: #1E503E;
-  --color-forest-dark: #0D261D;
-  --color-teal-accent: #0F766E;
-  --color-teal-pale: #F0FDFA;
-  --color-lavender: #8B5CF6;
-  --color-lavender-pale: #F5F3FF;
-  --color-paleblue: #0284C7;
-  --color-paleblue-pale: #F0F9FF;
-  --color-amber-accent: #D97706;
-  --color-amber-pale: #FFFBEB;
-  --color-charcoal: #1F2937;
-  --color-charcoal-muted: #4B5563;
-  --color-gray-green: #8FA499;
-  --color-gray-green-light: #E2E8E4;
-  --color-gray-green-border: #E5EBE6;
-  --color-rose-accent: #E11D48;
-  --color-rose-pale: #FFF1F2;
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-display);
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'DM Serif Display', Georgia, serif;
+  /* Semantic Theme Color Bindings */
+  --color-brand: var(--color-brand);
+  --color-brand-hover: var(--color-brand-hover);
+  --color-brand-soft: var(--color-brand-soft);
+  --color-brand-contrast: var(--color-brand-contrast);
+
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-contrast: var(--color-accent-contrast);
+
+  --color-page: var(--color-page);
+  --color-sidebar: var(--color-sidebar);
+  --color-topbar: var(--color-topbar);
+  --color-surface: var(--color-surface);
+  --color-surface-subtle: var(--color-surface-subtle);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-nav-selected: var(--color-nav-selected);
+
+  --color-text-primary: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-on-brand: var(--color-text-on-brand);
+
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-focus: var(--color-focus);
+
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
 }
 
 @layer base {
-  body {
-    background-color: #FDFBF7;
-    color: #1F2937;
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+  * {
+    border-color: var(--color-border);
   }
 
-  h1, h2, h3, .font-display {
-    font-family: var(--font-display);
-    letter-spacing: -0.01em;
+  html {
+    scroll-behavior: smooth;
   }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-text-secondary);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    color: var(--color-text);
+    letter-spacing: -0.015em;
+  }
+}
+
+/* ==========================================================================
+   Shared Component Utility Classes
+   ========================================================================== */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-card);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.card-clickable {
+  cursor: pointer;
+}
+
+.card-clickable:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* Custom scrollbars */
@@ -54,37 +109,21 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 9999px;
+  background: var(--color-border-strong);
+  border-radius: var(--radius-pill);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: var(--color-text-muted);
 }
 
-/* Subtle botanical textured background pattern */
-.bg-garden-pattern {
-  background-color: #FDFBF7;
-  background-image: radial-gradient(#10B981 0.75px, transparent 0.75px), radial-gradient(#14382B 0.75px, #FDFBF7 0.75px);
-  background-size: 32px 32px;
-  background-position: 0 0, 16px 16px;
-  background-opacity: 0.04;
-}
-
-/* Animations */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.03); }
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes leaf-sway {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(4deg); }
-}
-
-.animate-sway {
-  animation: leaf-sway 4s ease-in-out infinite;
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

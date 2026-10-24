@@ -1,10 +1,10 @@
-import {
+import type {
   Project,
   Team,
   Reminder,
   Notification,
   UserProfile,
-} from '../types';
+} from '../types/index.ts';
 
 export const INITIAL_USER_PROFILE: UserProfile = {
   id: 'user-1',

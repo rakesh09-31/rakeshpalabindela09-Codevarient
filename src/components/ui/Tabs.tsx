@@ -1,14 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-interface Tab {
+export interface Tab {
   id: string;
   label: string;
   icon?: React.ReactNode;
   count?: number;
 }
 
-interface TabsProps {
+export interface TabsProps {
   tabs: Tab[];
   activeTab: string;
   onChange: (id: string) => void;
@@ -23,7 +23,7 @@ export const Tabs: React.FC<TabsProps> = ({
 }) => {
   return (
     <div
-      className={`flex gap-1 border-b border-gray-green-border/60 ${className}`}
+      className={`flex gap-2 border-b border-zinc-200/80 dark:border-zinc-800 overflow-x-auto scrollbar-none ${className}`}
       role="tablist"
     >
       {tabs.map((tab) => {
@@ -37,34 +37,37 @@ export const Tabs: React.FC<TabsProps> = ({
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={`
-              relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium
-              transition-colors duration-150 cursor-pointer
+              relative flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium
+              transition-colors duration-150 cursor-pointer select-none whitespace-nowrap
               ${
                 isActive
-                  ? 'text-forest'
-                  : 'text-charcoal-light hover:text-charcoal'
+                  ? 'text-zinc-900 dark:text-zinc-100 font-semibold'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
               }
             `}
           >
             {tab.icon && <span className="shrink-0">{tab.icon}</span>}
-            {tab.label}
+            <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
                 className={`
-                  ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full leading-none
-                  ${isActive ? 'bg-mint-pale text-forest' : 'bg-gray-green-light/50 text-charcoal-light'}
+                  px-1.5 py-0.5 text-[10px] font-mono rounded-md leading-none
+                  ${
+                    isActive
+                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 font-bold'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                  }
                 `}
               >
                 {tab.count}
               </span>
             )}
 
-            {/* Active indicator */}
             {isActive && (
               <motion.div
-                layoutId="tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-forest rounded-full"
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                layoutId="activeTabUnderline"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 dark:bg-zinc-100"
+                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
               />
             )}
           </button>
@@ -74,4 +77,4 @@ export const Tabs: React.FC<TabsProps> = ({
   );
 };
 
-Tabs.displayName = 'Tabs';
+export default Tabs;

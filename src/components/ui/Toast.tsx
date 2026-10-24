@@ -19,17 +19,17 @@ interface ToastContextValue {
 /* ───── Styling ───── */
 
 const typeClasses: Record<ToastType, string> = {
-  success: 'bg-mint-pale border-mint text-forest',
-  error: 'bg-rose-light/30 border-rose text-rose',
-  info: 'bg-paleblue-light border-paleblue text-teal',
-  warning: 'bg-amber-warm border-amber text-amber',
+  success: 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] shadow-[var(--shadow-popover)]',
+  error: 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-danger)]/30 shadow-[var(--shadow-popover)]',
+  info: 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] shadow-[var(--shadow-popover)]',
+  warning: 'bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-warning)]/30 shadow-[var(--shadow-popover)]',
 };
 
 const typeIcons: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle size={18} />,
-  error: <AlertCircle size={18} />,
-  info: <Info size={18} />,
-  warning: <AlertTriangle size={18} />,
+  success: <CheckCircle size={18} className="text-[var(--color-success)]" />,
+  error: <AlertCircle size={18} className="text-[var(--color-danger)]" />,
+  info: <Info size={18} className="text-[var(--color-brand)]" />,
+  warning: <AlertTriangle size={18} className="text-[var(--color-warning)]" />,
 };
 
 /* ───── Context ───── */
@@ -78,10 +78,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               initial={{ opacity: 0, x: 60, scale: 0.95 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 60, scale: 0.95 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
               className={`
                 pointer-events-auto flex items-start gap-2.5
-                border rounded-xl px-4 py-3 shadow-lg
+                border rounded-[var(--radius-md)] px-4 py-3
                 min-w-[280px] max-w-sm text-sm font-medium
                 ${typeClasses[t.type]}
               `}
@@ -91,7 +91,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               <button
                 type="button"
                 onClick={() => removeToast(t.id)}
-                className="shrink-0 p-0.5 rounded-md hover:bg-black/10 transition-colors cursor-pointer"
+                className="shrink-0 p-0.5 rounded-[var(--radius-sm)] hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer text-[var(--color-text-muted)]"
                 aria-label="Dismiss"
               >
                 <X size={14} />
@@ -105,3 +105,4 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 };
 
 ToastProvider.displayName = 'ToastProvider';
+export default ToastProvider;

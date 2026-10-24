@@ -1,8 +1,8 @@
 import React from 'react';
 
-type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
 
-interface AvatarProps {
+export interface AvatarProps {
   src?: string;
   name: string;
   size?: AvatarSize;
@@ -10,10 +10,10 @@ interface AvatarProps {
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
-  sm: 'h-7 w-7 text-xs',
-  md: 'h-9 w-9 text-sm',
-  lg: 'h-11 w-11 text-base',
-  xl: 'h-14 w-14 text-lg',
+  sm: 'h-6 w-6 text-[10px]',
+  md: 'h-8 w-8 text-xs',
+  lg: 'h-10 w-10 text-sm',
+  xl: 'h-12 w-12 text-base',
 };
 
 function getInitials(name: string): string {
@@ -39,7 +39,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     <div
       className={`
         rounded-full overflow-hidden flex items-center justify-center shrink-0 font-medium
-        ${showImage ? '' : 'bg-mint-pale text-forest'}
+        ${showImage ? '' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700'}
         ${sizeClasses[size]}
         ${className}
       `}
@@ -54,10 +54,11 @@ export const Avatar: React.FC<AvatarProps> = ({
           onError={() => setImgError(true)}
         />
       ) : (
-        <span>{getInitials(name)}</span>
+        <span className="font-mono">{getInitials(name)}</span>
       )}
     </div>
   );
 };
 
 Avatar.displayName = 'Avatar';
+export default Avatar;

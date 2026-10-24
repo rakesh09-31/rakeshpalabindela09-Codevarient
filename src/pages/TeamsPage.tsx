@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { TeamMember } from '../types';
-import { Avatar, Badge, Modal, Input, Textarea, ConfirmDialog } from '../components/ui';
+import { Avatar, Modal, Input, Textarea, ConfirmDialog, Button } from '../components/ui';
 
 export function TeamsPage() {
   const {
@@ -72,107 +72,126 @@ export function TeamsPage() {
   const pendingRequests = activeTeam?.joinRequests.filter((r) => r.status === 'pending') || [];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-mint-pale flex items-center justify-center text-forest">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+            <h1
+              className="text-2xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
               Teams & Collaboration
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal-light mt-1">
+          <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
             Build together. Form collectives, share project stewardship, and review contributor applications.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
+        <div>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setShowCreateTeamModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-forest text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-forest-light transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Create Team
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Main Workspace */}
       {!activeTeam ? (
-        <div className="bg-white rounded-2xl border border-gray-green-border/60 p-12 text-center">
-          <Users className="w-12 h-12 text-gray-green-light mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-charcoal">No teams formed yet</h3>
-          <p className="text-xs text-charcoal-light mb-4">
+        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-12 text-center shadow-2xs">
+          <Users className="w-12 h-12 text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-[var(--color-text)] dark:text-[var(--color-text)]">No teams formed yet</h3>
+          <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mb-4 max-w-sm mx-auto">
             Create your first collective to invite collaborators.
           </p>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setShowCreateTeamModal(true)}
-            className="px-4 py-2 bg-forest text-white rounded-xl text-xs font-semibold"
           >
             Create Team
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Team Info & Members */}
           <div className="lg:col-span-2 space-y-6">
             {/* Team Overview Card */}
-            <div className="bg-white rounded-3xl border border-gray-green-border/60 p-6 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-7 shadow-2xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-forest text-white flex items-center justify-center text-xl font-bold shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-surface-subtle)] dark:text-[var(--color-text)] flex items-center justify-center text-lg font-mono font-bold shadow-2xs">
                     {activeTeam.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+                    <h2
+                      className="text-xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
                       {activeTeam.name}
                     </h2>
-                    <p className="text-xs text-charcoal-light">{activeTeam.members.length} active members</p>
+                    <p className="text-xs font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
+                      {activeTeam.members.length} active members
+                    </p>
                   </div>
                 </div>
 
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowInviteModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-ivory-warm border border-gray-green-border text-xs sm:text-sm font-semibold text-charcoal hover:bg-white self-start sm:self-center"
+                  className="self-start sm:self-center"
                 >
                   <UserPlus className="w-4 h-4" /> Invite Contributor
-                </button>
+                </Button>
               </div>
 
-              <p className="text-xs sm:text-sm text-charcoal-light leading-relaxed">
+              <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)] leading-relaxed">
                 {activeTeam.description}
               </p>
             </div>
 
             {/* Pending Join Requests Queue */}
             {pendingRequests.length > 0 && (
-              <div className="bg-white rounded-2xl border border-amber/40 p-5 shadow-xs space-y-3">
+              <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)] p-6 shadow-2xs space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-amber flex items-center gap-2">
+                  <h3
+                    className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2 font-mono uppercase tracking-wider"
+                  >
                     <UserPlus className="w-4 h-4" /> Pending Join Requests ({pendingRequests.length})
                   </h3>
-                  <span className="text-[11px] text-charcoal-light">Review & onboard collaborators</span>
+                  <span className="text-[11px] text-[var(--color-text-muted)] font-mono">Review & onboard collaborators</span>
                 </div>
 
                 <div className="space-y-3">
                   {pendingRequests.map((req) => (
                     <div
                       key={req.id}
-                      className="p-3.5 rounded-xl bg-ivory border border-gray-green-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="p-4 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="flex items-start gap-3">
                         <Avatar name={req.userName} size="md" />
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs sm:text-sm font-bold text-charcoal">{req.userName}</span>
-                            <span className="text-[10px] text-charcoal-light">applied {new Date(req.createdAt).toLocaleDateString()}</span>
+                            <span className="text-xs sm:text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{req.userName}</span>
+                            <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
+                              applied {new Date(req.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
-                          <p className="text-xs text-charcoal-light italic mt-0.5">"{req.message}"</p>
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] italic mt-0.5">"{req.message}"</p>
+                          <div className="flex flex-wrap gap-1 mt-2">
                             {req.skills.map((s) => (
-                              <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-white text-charcoal border">
+                              <span
+                                key={s}
+                                className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white dark:bg-[var(--color-surface)] text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border)]"
+                              >
                                 {s}
                               </span>
                             ))}
@@ -181,18 +200,20 @@ export function TeamsPage() {
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
-                        <button
+                        <Button
+                          size="sm"
+                          variant="primary"
                           onClick={() => approveJoinRequest(activeTeam.id, req.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-forest text-white text-xs font-semibold hover:bg-forest-light"
                         >
                           <Check className="w-3.5 h-3.5" /> Approve
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => rejectJoinRequest(activeTeam.id, req.id)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-green-border text-xs text-charcoal-light hover:text-rose hover:bg-white"
                         >
                           <X className="w-3.5 h-3.5" /> Decline
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -201,8 +222,11 @@ export function TeamsPage() {
             )}
 
             {/* Team Members List */}
-            <div className="bg-white rounded-2xl border border-gray-green-border/60 p-6 space-y-4">
-              <h3 className="text-base font-semibold text-charcoal" style={{ fontFamily: 'var(--font-display)' }}>
+            <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-7 space-y-4 shadow-2xs">
+              <h3
+                className="text-base font-semibold text-[var(--color-text)] dark:text-[var(--color-text)]"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
                 Team Members ({activeTeam.members.length})
               </h3>
 
@@ -210,23 +234,26 @@ export function TeamsPage() {
                 {activeTeam.members.map((member) => (
                   <div
                     key={member.id}
-                    className="p-4 rounded-xl border border-gray-green-border/60 bg-ivory/40 flex items-start justify-between gap-3"
+                    className="p-4 rounded-2xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 flex items-start justify-between gap-3"
                   >
                     <div className="flex items-start gap-3">
                       <Avatar name={member.name} size="md" />
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-sm font-bold text-charcoal">{member.name}</span>
-                          <span className="text-[10px] px-2 py-0.2 rounded-full bg-ivory-warm border border-gray-green-border font-semibold capitalize">
+                          <span className="text-xs sm:text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{member.name}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border)] font-semibold capitalize text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)]">
                             {member.role}
                           </span>
                         </div>
-                        <span className="text-[11px] text-charcoal-light block mt-0.5">
+                        <span className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mt-0.5">
                           Availability: {member.availability}
                         </span>
                         <div className="flex flex-wrap gap-1 mt-2">
                           {member.skills.map((s) => (
-                            <span key={s} className="text-[10px] px-1.5 py-0.5 rounded bg-white text-charcoal-light border border-gray-green-border/60">
+                            <span
+                              key={s}
+                              className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white dark:bg-[var(--color-surface)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] border border-[var(--color-border)] dark:border-[var(--color-border)]"
+                            >
                               {s}
                             </span>
                           ))}
@@ -237,7 +264,7 @@ export function TeamsPage() {
                     {member.role !== 'owner' && (
                       <button
                         onClick={() => setRemoveMemberTarget(member)}
-                        className="p-1 text-charcoal-light hover:text-rose"
+                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white transition-colors cursor-pointer"
                         title="Remove member"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -251,11 +278,14 @@ export function TeamsPage() {
 
           {/* Right: Stewarded Projects */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-green-border/60 p-5 space-y-3">
-              <h3 className="text-sm font-bold text-charcoal flex items-center gap-2" style={{ fontFamily: 'var(--font-display)' }}>
-                <FolderOpen className="w-4 h-4 text-forest" /> Stewarded Projects ({associatedProjects.length})
+            <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-5 md:p-6 space-y-3.5 shadow-2xs">
+              <h3
+                className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2 font-mono uppercase tracking-wider"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <FolderOpen className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Stewarded Projects ({associatedProjects.length})
               </h3>
-              <p className="text-xs text-charcoal-light">
+              <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
                 Projects maintained collaboratively by {activeTeam.name}:
               </p>
 
@@ -264,13 +294,13 @@ export function TeamsPage() {
                   <div
                     key={p.id}
                     onClick={() => navigate(`/projects/${p.id}`)}
-                    className="p-3 rounded-xl bg-ivory hover:bg-mint-pale/30 border border-gray-green-border/40 transition-colors cursor-pointer"
+                    className="p-3.5 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 hover:bg-[var(--color-brand-soft)]/60 dark:hover:bg-[var(--color-brand)]/50 border border-[var(--color-border)]/70 dark:border-[var(--color-border)] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-xs sm:text-sm font-bold text-charcoal">{p.title}</h4>
-                      <span className="text-[10px] font-bold text-forest">{p.progress}%</span>
+                      <h4 className="text-xs sm:text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{p.title}</h4>
+                      <span className="text-[10px] font-mono font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">{p.progress}%</span>
                     </div>
-                    <p className="text-[11px] text-charcoal-light line-clamp-1">{p.summary}</p>
+                    <p className="text-[11px] text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] line-clamp-1">{p.summary}</p>
                   </div>
                 ))}
               </div>
@@ -301,19 +331,21 @@ export function TeamsPage() {
             placeholder="What shared technical or product mission unites this team?"
           />
           <div className="flex justify-end gap-2 pt-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowCreateTeamModal(false)}
-              className="px-3.5 py-2 rounded-xl border text-xs"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-forest text-white text-xs font-semibold hover:bg-forest-light"
+              variant="primary"
+              size="sm"
             >
               Create Team
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -339,19 +371,21 @@ export function TeamsPage() {
             placeholder="e.g. React, UX Design, Python"
           />
           <div className="flex justify-end gap-2 pt-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowInviteModal(false)}
-              className="px-3.5 py-2 rounded-xl border text-xs"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-forest text-white text-xs font-semibold hover:bg-forest-light"
+              variant="primary"
+              size="sm"
             >
               Add Member
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
