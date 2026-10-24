@@ -39,7 +39,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     <div
       className={`
         rounded-full overflow-hidden flex items-center justify-center shrink-0 font-medium
-        ${showImage ? '' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700'}
+        ${showImage ? '' : 'bg-[var(--color-surface-subtle)] text-[var(--color-brand)] border border-[var(--color-border)]'}
         ${sizeClasses[size]}
         ${className}
       `}

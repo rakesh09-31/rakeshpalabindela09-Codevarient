@@ -119,7 +119,7 @@ export default function Header() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search archive…"
-                className="w-48 sm:w-64 h-[42px] pl-3.5 pr-9 text-sm rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20"
+                className="w-48 sm:w-64 h-[42px] pl-3.5 pr-9 text-sm rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20"
               />
               <button
                 type="button"
@@ -165,7 +165,7 @@ export default function Header() {
           >
             <Bell className="w-4.5 h-4.5" />
             {unreadCount > 0 && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--color-accent)]" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--color-accent)] shadow-[0_0_8px_#C026D3]" />
             )}
           </button>
 
@@ -220,7 +220,7 @@ export default function Header() {
                             {n.title}
                           </span>
                           {!n.read && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] shrink-0 mt-1" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] shrink-0 mt-1 shadow-[0_0_6px_#C026D3]" />
                           )}
                         </div>
                         <p className="text-[var(--color-text-secondary)] mt-1 leading-relaxed">

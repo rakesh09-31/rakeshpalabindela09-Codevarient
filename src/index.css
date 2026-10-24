@@ -23,15 +23,21 @@
   --color-topbar: var(--color-topbar);
   --color-surface: var(--color-surface);
   --color-surface-subtle: var(--color-surface-subtle);
+  --color-surface-raised: var(--color-surface-raised);
   --color-surface-hover: var(--color-surface-hover);
+  --color-input: var(--color-input);
   --color-nav-selected: var(--color-nav-selected);
 
   --color-text-primary: var(--color-text);
+  --color-text-body: var(--color-text-body);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-muted: var(--color-text-muted);
+  --color-text-tertiary: var(--color-text-tertiary);
+  --color-text-disabled: var(--color-text-disabled);
   --color-text-on-brand: var(--color-text-on-brand);
 
   --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
   --color-border-strong: var(--color-border-strong);
   --color-focus: var(--color-focus);
 
@@ -54,7 +60,9 @@
 
   body {
     background-color: var(--color-page);
-    color: var(--color-text-secondary);
+    background-image: radial-gradient(circle 900px at 50% -120px, rgba(139, 47, 232, 0.12) 0%, rgba(69, 104, 220, 0.05) 45%, transparent 75%);
+    background-attachment: fixed;
+    color: var(--color-text-body);
     font-family: var(--font-ui);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -62,10 +70,34 @@
     transition: background-color 160ms ease, color 160ms ease;
   }
 
+  [data-theme="light"] body {
+    background-image: radial-gradient(circle 900px at 50% -120px, rgba(122, 32, 212, 0.05) 0%, transparent 70%);
+  }
+
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
     color: var(--color-text);
     letter-spacing: -0.015em;
+  }
+
+  p {
+    color: var(--color-text-body);
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    background-color: var(--color-input);
+    color: var(--color-text);
+    border-color: var(--color-border);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-text-muted);
   }
 }
 

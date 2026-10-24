@@ -11,8 +11,10 @@
     <script>
       (function() {
         try {
+          var params = new URLSearchParams(window.location.search);
+          var qTheme = params.get('theme');
           var saved = localStorage.getItem('graveyard_theme');
-          var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          var theme = qTheme || saved || 'dark';
           document.documentElement.setAttribute('data-theme', theme);
           if (theme === 'dark') {
             document.documentElement.classList.add('dark');

@@ -342,8 +342,16 @@ export function apiPlugin(): Plugin {
             return sendJson(res, created, 201);
           }
 
+          // PATCH /api/reminders/:id
+          const reminderPatchMatch = url.match(/^\/api\/reminders\/([^/?]+)$/);
+          if (reminderPatchMatch && method === 'PATCH') {
+            const body = await parseJsonBody(req);
+            const updated = dbManager.updateReminder(reminderPatchMatch[1], body);
+            return sendJson(res, updated);
+          }
+
           // DELETE /api/reminders/:id
-          const reminderDelMatch = url.match(/^\/api\/reminders\/([^\/]+)$/);
+          const reminderDelMatch = url.match(/^\/api\/reminders\/([^/?]+)$/);
           if (reminderDelMatch && method === 'DELETE') {
             dbManager.deleteReminder(reminderDelMatch[1]);
             return sendJson(res, { success: true });

@@ -96,101 +96,101 @@ export function AnalyticsPage() {
   }, [projects]);
 
   const isDark = theme === 'dark';
-  const axisTickColor = isDark ? '#9691AE' : '#68657D';
-  const tooltipBg = isDark ? '#211F30' : '#FFFFFF';
-  const tooltipBorder = isDark ? '#39364D' : '#E5E2F0';
-  const tooltipText = isDark ? '#F4F1FF' : '#211F35';
-  const primaryBarFill = isDark ? '#A39AFF' : '#5146D8';
-  const secondaryBarFill = isDark ? '#FF9586' : '#F27665';
+  const axisTickColor = isDark ? '#BDB5CC' : '#594E6B';
+  const tooltipBg = isDark ? '#211A2D' : '#FFFFFF';
+  const tooltipBorder = isDark ? '#493B5B' : '#D8CFE6';
+  const tooltipText = isDark ? '#F8F7FB' : '#1A1326';
+  const primaryBarFill = isDark ? '#8B2FE8' : '#7A20D4';
+  const secondaryBarFill = isDark ? '#C026D3' : '#A21CAF';
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Top Banner */}
       <div>
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white flex items-center justify-center">
+          <div className="w-9 h-9 rounded-2xl bg-[var(--color-brand)] text-[var(--color-text-on-brand)] flex items-center justify-center">
             <BarChart3 className="w-5 h-5" />
           </div>
           <h1
-            className="text-2xl md:text-3xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+            className="text-2xl md:text-3xl font-bold text-[var(--color-text)] tracking-tight"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Digital Garden Analytics
           </h1>
         </div>
-        <p className="text-xs sm:text-sm text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
+        <p className="text-xs sm:text-sm text-[var(--color-text-body)] mt-1">
           Real-time metrics calculated from your current project records, milestone completions, and blockers.
         </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 shadow-2xs">
-          <span className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] font-mono uppercase tracking-wider block mb-2">
+        <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 shadow-xs">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)] font-mono uppercase tracking-wider block mb-2">
             Average Progress
           </span>
           <div className="flex items-baseline gap-2">
             <span
-              className="text-3xl font-bold font-mono text-[var(--color-text)] dark:text-[var(--color-text)]"
+              className="text-3xl font-bold font-mono text-[var(--color-text)]"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {metrics.avgProgress}%
             </span>
-            <span className="text-xs font-mono text-[var(--color-text-muted)]">garden mean</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">garden mean</span>
           </div>
           <ProgressBar value={metrics.avgProgress} size="xs" className="mt-3.5" />
         </div>
 
-        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 shadow-2xs">
-          <span className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] font-mono uppercase tracking-wider block mb-2">
+        <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 shadow-xs">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)] font-mono uppercase tracking-wider block mb-2">
             Total Deliverables
           </span>
           <div className="flex items-baseline gap-2">
             <span
-              className="text-3xl font-bold font-mono text-[var(--color-text)] dark:text-[var(--color-text)]"
+              className="text-3xl font-bold font-mono text-[var(--color-text)]"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {metrics.completedTasks}/{metrics.totalTasks}
             </span>
-            <span className="text-xs font-mono text-[var(--color-text-muted)]">tasks closed</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">tasks closed</span>
           </div>
-          <span className="text-[11px] font-mono text-[var(--color-text-muted)] block mt-3.5">
+          <span className="text-xs font-medium text-[var(--color-text-body)] block mt-3.5">
             Across {projects.length} recorded repositories
           </span>
         </div>
 
-        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 shadow-2xs">
-          <span className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] font-mono uppercase tracking-wider block mb-2">
+        <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 shadow-xs">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)] font-mono uppercase tracking-wider block mb-2">
             Active / Revived Ideas
           </span>
           <div className="flex items-baseline gap-2">
             <span
-              className="text-3xl font-bold font-mono text-[var(--color-text)] dark:text-[var(--color-text)]"
+              className="text-3xl font-bold font-mono text-[var(--color-text)]"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {metrics.active}
             </span>
-            <span className="text-xs font-mono text-[var(--color-text-muted)]">of {metrics.total} total</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">of {metrics.total} total</span>
           </div>
-          <span className="text-[11px] font-mono text-[var(--color-text-muted)] block mt-3.5">
+          <span className="text-xs font-medium text-[var(--color-text-body)] block mt-3.5">
             {metrics.paused} paused, {metrics.completed} shipped
           </span>
         </div>
 
-        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 shadow-2xs">
-          <span className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] font-mono uppercase tracking-wider block mb-2">
+        <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 shadow-xs">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)] font-mono uppercase tracking-wider block mb-2">
             Unresolved Blockers
           </span>
           <div className="flex items-baseline gap-2">
             <span
-              className="text-3xl font-bold font-mono text-[var(--color-text)] dark:text-[var(--color-text)]"
+              className="text-3xl font-bold font-mono text-[var(--color-text)]"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {metrics.totalBlockers}
             </span>
-            <span className="text-xs font-mono text-[var(--color-text-muted)]">impediments</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">impediments</span>
           </div>
-          <span className="text-[11px] font-mono text-[var(--color-text-muted)] block mt-3.5">
+          <span className="text-xs font-medium text-[var(--color-text-body)] block mt-3.5">
             Addressable via Revival Studio
           </span>
         </div>
@@ -199,14 +199,14 @@ export function AnalyticsPage() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Status Breakdown Bar chart */}
-        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-7 shadow-2xs space-y-4">
+        <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 md:p-7 shadow-xs space-y-4">
           <h2
-            className="text-base font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+            className="text-base font-bold text-[var(--color-text)] flex items-center gap-2"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            <Layers className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Project Lifecycle Status Distribution
+            <Layers className="w-4 h-4 text-[var(--color-brand)]" /> Project Lifecycle Status Distribution
           </h2>
-          <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-secondary)]">
             Visualizing the health and distribution of ideas in your digital garden.
           </p>
 
@@ -222,20 +222,20 @@ export function AnalyticsPage() {
               return (
                 <div key={item.label} className="space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="font-medium text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-1.5">
-                      <span className="font-mono text-xs text-[var(--color-text-muted)]">{item.symbol}</span>
+                    <span className="font-semibold text-[var(--color-text)] flex items-center gap-1.5">
+                      <span className="font-mono text-xs text-[var(--color-text-secondary)]">{item.symbol}</span>
                       <span>{item.label}</span>
                     </span>
-                    <span className="font-mono font-bold text-[var(--color-text)] dark:text-[var(--color-text)]">
+                    <span className="font-mono font-bold text-[var(--color-text)]">
                       {item.count} ({pct}%)
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 rounded-full overflow-hidden border border-[var(--color-border)] dark:border-[var(--color-border-strong)]/60">
+                  <div className="w-full h-2 bg-[var(--color-surface-subtle)] rounded-full overflow-hidden border border-[var(--color-border)]">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6 }}
-                      className="h-full bg-[var(--color-brand)] dark:bg-[var(--color-surface-subtle)] rounded-full"
+                      className="h-full bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] rounded-full"
                     />
                   </div>
                 </div>
@@ -245,14 +245,14 @@ export function AnalyticsPage() {
         </div>
 
         {/* Technology Ecosystem */}
-        <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-7 shadow-2xs space-y-4">
+        <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 md:p-7 shadow-xs space-y-4">
           <h2
-            className="text-base font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2"
+            className="text-base font-bold text-[var(--color-text)] flex items-center gap-2"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            <Code2 className="w-4 h-4 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Technology Ecosystem Frequency
+            <Code2 className="w-4 h-4 text-[var(--color-brand)]" /> Technology Ecosystem Frequency
           </h2>
-          <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-secondary)]">
             Most utilized languages and frameworks across your repositories.
           </p>
 
@@ -260,27 +260,27 @@ export function AnalyticsPage() {
             {metrics.sortedTech.map(([tech, count]) => (
               <div
                 key={tech}
-                className="p-3.5 rounded-2xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between"
+                className="p-3.5 rounded-2xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between"
               >
-                <span className="text-xs font-bold text-[var(--color-text)] dark:text-[var(--color-text)] font-mono">{tech}</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border)] font-mono text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)]">
+                <span className="text-xs font-bold text-[var(--color-text)] font-mono">{tech}</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] font-mono text-[var(--color-text-body)] font-medium">
                   {count} repo{count > 1 ? 's' : ''}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="pt-3 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80">
-            <span className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-2 font-mono uppercase tracking-wider">
+          <div className="pt-3 border-t border-[var(--color-border)]">
+            <span className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-2 font-mono uppercase tracking-wider">
               Category Distribution:
             </span>
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(metrics.catMap).map(([cat, count]) => (
                 <span
                   key={cat}
-                  className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border)] text-[var(--color-text)] dark:text-[var(--color-text)]"
+                  className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-body)]"
                 >
-                  {cat}: <strong className="text-[var(--color-text)] dark:text-[var(--color-text)]">{count}</strong>
+                  {cat}: <strong className="text-[var(--color-text)] font-bold">{count}</strong>
                 </span>
               ))}
             </div>
@@ -289,17 +289,17 @@ export function AnalyticsPage() {
       </div>
 
       {/* Interactive Project Health & Progress Comparison */}
-      <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-8 shadow-2xs space-y-4">
+      <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 md:p-8 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2
-              className="text-base sm:text-lg font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2 tracking-tight"
+              className="text-base sm:text-lg font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              <TrendingUp className="w-5 h-5 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Code Progress vs. Revival Readiness
+              <TrendingUp className="w-5 h-5 text-[var(--color-brand)]" /> Code Progress vs. Revival Readiness
             </h2>
-            <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
-              Dual-metric visual comparison: Primary monochrome bar represents completed code deliverables, Muted secondary bar represents algorithmic revival readiness.
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+              Dual-metric visual comparison: Violet bar represents completed code deliverables, Magenta bar represents algorithmic revival readiness.
             </p>
           </div>
         </div>
@@ -336,53 +336,51 @@ export function AnalyticsPage() {
       </div>
 
       {/* Revival Readiness Leaderboard */}
-      <div className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-8 shadow-2xs space-y-4">
+      <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 md:p-8 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2
-              className="text-lg font-bold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-2 tracking-tight"
+              className="text-lg font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              <Zap className="w-5 h-5 text-[var(--color-text)] dark:text-[var(--color-text)]" /> Revival Readiness Leaderboard
+              <Zap className="w-5 h-5 text-[var(--color-brand)]" /> Revival Readiness Leaderboard
             </h2>
-            <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-1">
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
               Transparent assessment score ranking which projects are quickest to resurrect based on completeness and blocker density.
             </p>
           </div>
         </div>
 
-        <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
+        <div className="divide-y divide-[var(--color-border)]">
           {metrics.readinessList.map(({ project, score, recommendation }, idx) => (
             <div
               key={project.id}
               className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 group"
             >
               <div className="flex items-center gap-3">
-                <span className="w-6 text-sm font-mono font-bold text-[var(--color-text-muted)] text-center">
+                <span className="w-6 text-sm font-mono font-bold text-[var(--color-text-secondary)] text-center">
                   #{idx + 1}
                 </span>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3
                       onClick={() => navigate(`/projects/${project.id}`)}
-                      className="text-sm font-bold text-[var(--color-text)] dark:text-[var(--color-text)] hover:underline transition-colors cursor-pointer"
+                      className="text-sm font-bold text-[var(--color-text)] hover:text-[var(--color-brand)] hover:underline transition-colors cursor-pointer"
                     >
                       {project.title}
                     </h3>
-                    <Badge variant="tech" size="sm">
-                      {project.status}
-                    </Badge>
+                    <Badge status={project.status as any} size="sm" />
                   </div>
-                  <p className="text-xs text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] mt-0.5">{recommendation}</p>
+                  <p className="text-xs text-[var(--color-text-body)] mt-0.5">{recommendation}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-4 self-end md:self-center">
                 <div className="text-right">
-                  <span className="text-xs font-mono font-bold text-[var(--color-text)] dark:text-[var(--color-text)] block">
+                  <span className="text-sm font-mono font-bold text-[var(--color-text)] block">
                     {score}/100
                   </span>
-                  <span className="text-[10px] font-mono text-[var(--color-text-muted)]">readiness score</span>
+                  <span className="text-[10px] font-mono text-[var(--color-text-secondary)] font-medium">readiness score</span>
                 </div>
 
                 <Button

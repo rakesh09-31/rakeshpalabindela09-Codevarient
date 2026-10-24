@@ -205,8 +205,11 @@ export class DatabaseManager {
 
   createProject(project: Project): Project {
     const now = new Date().toISOString();
+    project.id = project.id || `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    project.ownerId = project.ownerId || 'user-1';
+    project.category = project.category || 'General';
     project.progress = calculateProjectProgress(project);
-    project.createdAt = now;
+    project.createdAt = project.createdAt || now;
     project.updatedAt = now;
 
     const stmt = this.db.prepare(`
@@ -241,6 +244,10 @@ export class DatabaseManager {
       ...updates,
       updatedAt: now,
     };
+
+    if ('repoUrl' in updates) {
+      updated.repoUrl = updates.repoUrl ? updates.repoUrl : undefined;
+    }
 
     if (timelineNote) {
       const tlEvent: TimelineEvent = {
@@ -443,6 +450,11 @@ export class DatabaseManager {
     return updated;
   }
 
+  deleteTeam(id: string): void {
+    const stmt = this.db.prepare('DELETE FROM teams WHERE id = ?');
+    stmt.run(id);
+  }
+
   // ---------------- REMINDERS ----------------
   getReminders(): Reminder[] {
     const rows = this.db.prepare('SELECT data FROM reminders ORDER BY created_at DESC').all() as { data: string }[];
@@ -496,6 +508,11 @@ export class DatabaseManager {
     const stmt = this.db.prepare('UPDATE fusions SET status = ?, data = ? WHERE id = ?');
     stmt.run(updated.status, JSON.stringify(updated), id);
     return updated;
+  }
+
+  deleteFusion(id: string): void {
+    const stmt = this.db.prepare('DELETE FROM fusions WHERE id = ?');
+    stmt.run(id);
   }
 }
 

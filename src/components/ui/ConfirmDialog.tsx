@@ -25,7 +25,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">{message}</p>
+      <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mb-6 leading-relaxed">{message}</p>
       <div className="flex items-center justify-end gap-2.5">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
           Cancel

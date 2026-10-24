@@ -1,56 +1,71 @@
 /* ==========================================================================
    The Project Graveyard — Central Design Tokens
-   Midnight + Mint + Warm Amber Design System
+   Luminous Purple / Magenta (OmniCraft-inspired) Design System
    ========================================================================== */
 
 :root,
 [data-theme="light"] {
   color-scheme: light;
 
-  /* Brand (Mint / Forest Teal for WCAG AAA 7.3:1 contrast on light surfaces) */
-  --color-brand: #0D8262;
-  --color-brand-hover: #09684E;
-  --color-brand-soft: #E2F7F0;
+  /* Brand (Vivid Violet & Magenta) */
+  --color-brand: #7A20D4;
+  --color-brand-hover: #6716B8;
+  --color-brand-soft: #F1E8FD;
   --color-brand-contrast: #FFFFFF;
   --color-text-on-brand: #FFFFFF;
 
-  /* Accent (Warm Amber / Honey) */
-  --color-accent: #D97706;
-  --color-accent-hover: #B45309;
-  --color-accent-soft: #FEF3C7;
+  /* Accent (Magenta / Orchid) */
+  --color-accent: #C026D3;
+  --color-accent-hover: #A21CAF;
+  --color-accent-soft: #FDF2F8;
   --color-accent-contrast: #FFFFFF;
 
+  /* Gradient Brand Tokens */
+  --gradient-brand: linear-gradient(135deg, #4568DC 0%, #7A20D4 45%, #C026D3 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #5B7CF2 0%, #8E2DE2 45%, #D946EF 100%);
+
   /* App surfaces */
-  --color-page: #F4F7F9;
+  --color-page: #F6F4FA;
   --color-sidebar: #FFFFFF;
   --color-topbar: #FFFFFF;
   --color-surface: #FFFFFF;
-  --color-surface-subtle: #EBF0F5;
-  --color-surface-hover: #E3EAF2;
-  --color-nav-selected: #E2F7F0;
+  --color-surface-subtle: #EFEBF6;
+  --color-surface-raised: #F1EBF7;
+  --color-surface-hover: #E8E2F2;
+  --color-input: #FFFFFF;
+  --color-nav-selected: #F1E8FD;
 
   /* Text */
-  --color-text: #101820;
-  --color-text-secondary: #485D6F;
-  --color-text-muted: #6B8094;
+  --color-text: #1A1326;
+  --color-text-body: #2E243D;
+  --color-text-secondary: #594E6B;
+  --color-text-muted: #7F7394;
+  --color-text-tertiary: #7F7394;
+  --color-text-disabled: #A398B5;
 
   /* Borders and focus */
-  --color-border: #D2DCE6;
-  --color-border-strong: #AFC0D2;
-  --color-focus: #0D8262;
+  --color-border: #D8CFE6;
+  --color-border-subtle: #EAE3F2;
+  --color-border-strong: #B8A9D1;
+  --color-focus: #7A20D4;
 
-  /* Semantic status colors: use sparingly */
-  --color-success: #0D8262;
-  --color-success-soft: #E2F7F0;
+  /* Distinct Semantic status colors */
+  --color-status-active: #0891B2;
+  --color-status-active-soft: #ECFEFF;
+  --color-status-paused: #D97706;
+  --color-status-paused-soft: #FEF3C7;
+  --color-success: #16A34A;
+  --color-success-soft: #DCFCE7;
   --color-warning: #D97706;
   --color-warning-soft: #FEF3C7;
-  --color-danger: #C53030;
-  --color-danger-soft: #FDE8E8;
+  --color-danger: #DC2626;
+  --color-danger-soft: #FEE2E2;
 
-  /* Shadows */
-  --shadow-card: 0 2px 8px rgb(16 24 32 / 6%);
-  --shadow-card-hover: 0 8px 24px rgb(16 24 32 / 10%);
-  --shadow-popover: 0 12px 36px rgb(16 24 32 / 15%);
+  /* Shadows with violet atmospheric tint */
+  --shadow-card: 0 4px 16px rgb(26 19 38 / 6%);
+  --shadow-card-hover: 0 8px 28px rgb(26 19 38 / 12%);
+  --shadow-popover: 0 12px 36px rgb(26 19 38 / 16%);
+  --shadow-glow: 0 0 24px rgba(122, 32, 212, 0.25);
 
   /* Compatibility aliases */
   --bg-canvas: var(--color-page);
@@ -60,58 +75,73 @@
   --border-subtle: var(--color-border);
   --border-strong: var(--color-border-strong);
   --text-primary: var(--color-text);
-  --brand-mint: var(--color-brand);
-  --accent-amber: var(--color-accent);
+  --brand-violet: var(--color-brand);
+  --accent-magenta: var(--color-accent);
 }
 
 [data-theme="dark"],
 .dark {
   color-scheme: dark;
 
-  /* Brand (Primary Accent Mint) */
-  --color-brand: #42E8B4;
-  --color-brand-hover: #65F0C5;
-  --color-brand-soft: #203D3A;
-  --color-brand-contrast: #0B1917;
-  --color-text-on-brand: #0B1917;
+  /* Brand (Vivid Violet & Magenta Identity) */
+  --color-brand: #8B2FE8;
+  --color-brand-hover: #9D47F4;
+  --color-brand-soft: #2D1D42;
+  --color-brand-contrast: #FFFFFF;
+  --color-text-on-brand: #FFFFFF;
 
-  /* Accent (Warm Amber) */
-  --color-accent: #FFB86B;
-  --color-accent-hover: #FFA747;
-  --color-accent-soft: rgba(255, 184, 107, 0.16);
-  --color-accent-contrast: #1E150B;
+  /* Accent (Luminous Magenta) */
+  --color-accent: #C026D3;
+  --color-accent-hover: #D946EF;
+  --color-accent-soft: rgba(192, 38, 211, 0.16);
+  --color-accent-contrast: #FFFFFF;
 
-  /* App surfaces: Midnight + Clear contrast separation */
-  --color-page: #101820;
-  --color-sidebar: #151F29;
-  --color-topbar: #151F29;
-  --color-surface: #202B36;
-  --color-surface-subtle: #273541;
-  --color-surface-hover: #2C3B49;
-  --color-nav-selected: #203D3A;
+  /* Gradient Brand Tokens (Violet -> Magenta with restrained blue highlight) */
+  --gradient-brand: linear-gradient(135deg, #4568DC 0%, #8B2FE8 45%, #C026D3 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #5B7CF2 0%, #9D47F4 45%, #D946EF 100%);
 
-  /* Text: High luminosity & readability */
-  --color-text: #F5F7FA;
-  --color-text-secondary: #AAB8C5;
-  --color-text-muted: #788B9E;
+  /* App surfaces: Charcoal with purple undertone */
+  --color-page: #050408;
+  --color-sidebar: #17131F;
+  --color-topbar: #17131F;
+  --color-surface: #211A2D;
+  --color-surface-subtle: #2A2039;
+  --color-surface-raised: #2A2039;
+  --color-surface-hover: #322644;
+  --color-input: #261E34;
+  --color-nav-selected: #2D1D42;
 
-  /* Borders and focus */
-  --color-border: #344452;
-  --color-border-strong: #4E6377;
-  --color-focus: #42E8B4;
+  /* Dark-mode text hierarchy */
+  --color-text: #F8F7FB;
+  --color-text-body: #E1DCE9;
+  --color-text-secondary: #BDB5CC;
+  --color-text-muted: #A49AAF;
+  --color-text-tertiary: #A49AAF;
+  --color-text-disabled: #6E647E;
 
-  /* Semantic status */
-  --color-success: #42E8B4;
-  --color-success-soft: #1B3831;
-  --color-warning: #FFB86B;
-  --color-warning-soft: #382A1B;
-  --color-danger: #FF7B89;
-  --color-danger-soft: #3E1E24;
+  /* Borders: Visible subtle border */
+  --color-border: #493B5B;
+  --color-border-subtle: #382B49;
+  --color-border-strong: #65537D;
+  --color-focus: #A855F7;
 
-  /* Shadows */
-  --shadow-card: 0 2px 8px rgb(0 0 0 / 25%);
-  --shadow-card-hover: 0 8px 24px rgb(0 0 0 / 40%);
-  --shadow-popover: 0 12px 36px rgb(0 0 0 / 55%);
+  /* Distinct Semantic status colors */
+  --color-status-active: #38BDF8;
+  --color-status-active-soft: rgba(56, 189, 248, 0.16);
+  --color-status-paused: #FBBF24;
+  --color-status-paused-soft: rgba(251, 191, 36, 0.16);
+  --color-success: #34D399;
+  --color-success-soft: rgba(52, 211, 153, 0.16);
+  --color-warning: #FBBF24;
+  --color-warning-soft: rgba(251, 191, 36, 0.16);
+  --color-danger: #F87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.18);
+
+  /* Luminous Glows and Shadows */
+  --shadow-card: 0 4px 20px -2px rgba(5, 4, 8, 0.65), 0 0 1px rgba(139, 47, 232, 0.2);
+  --shadow-card-hover: 0 8px 30px -4px rgba(5, 4, 8, 0.85), 0 0 20px -3px rgba(139, 47, 232, 0.35);
+  --shadow-popover: 0 16px 40px -4px rgba(5, 4, 8, 0.9), 0 0 24px -2px rgba(139, 47, 232, 0.4);
+  --shadow-glow: 0 0 35px -5px rgba(139, 47, 232, 0.45), 0 0 15px rgba(192, 38, 211, 0.25);
 
   /* Compatibility aliases */
   --bg-canvas: var(--color-page);
@@ -121,8 +151,8 @@
   --border-subtle: var(--color-border);
   --border-strong: var(--color-border-strong);
   --text-primary: var(--color-text);
-  --brand-mint: var(--color-brand);
-  --accent-amber: var(--color-accent);
+  --brand-violet: var(--color-brand);
+  --accent-magenta: var(--color-accent);
 }
 
 :root {

@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node tests/integrationTest.mjs && node tests/startupTimingTest.mjs",
+    "test": "node tests/integrationTest.mjs && node tests/startupTimingTest.mjs && node tests/supabaseConnectionTest.mjs && node tests/repoUrlAndStudioScrollTest.mjs && node tests/statusTransitionAndDetailTest.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "date-fns": "^4.4.0",
     "framer-motion": "^14.6.0",
     "lucide-react": "^1.61.0",

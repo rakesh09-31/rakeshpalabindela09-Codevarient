@@ -170,6 +170,13 @@ export class ApiClient {
     });
   }
 
+  async updateReminder(id: string, updates: Partial<Reminder>): Promise<Reminder> {
+    return this.request<Reminder>(`/reminders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
   async deleteReminder(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/reminders/${id}`, {
       method: 'DELETE',

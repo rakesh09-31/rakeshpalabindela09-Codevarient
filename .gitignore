@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
 # Database
 data/*.db
 data/*.db-journal

@@ -16,12 +16,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="rounded-2xl bg-zinc-100 dark:bg-zinc-850 border border-zinc-200/80 dark:border-zinc-800 p-4 mb-4">
-        <Icon size={28} className="text-zinc-700 dark:text-zinc-300" />
+      <div className="rounded-2xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] p-4 mb-4">
+        <Icon size={28} className="text-[var(--color-brand)]" />
       </div>
-      <h3 className="font-display text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 mb-1.5">{title}</h3>
+      <h3 className="font-display text-lg sm:text-xl text-[var(--color-text)] mb-1.5">{title}</h3>
       {description && (
-        <p className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm max-w-md mb-5 leading-relaxed">{description}</p>
+        <p className="text-[var(--color-text-secondary)] text-xs sm:text-sm max-w-md mb-5 leading-relaxed">{description}</p>
       )}
       {action && <div>{action}</div>}
     </div>

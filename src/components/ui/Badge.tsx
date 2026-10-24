@@ -48,12 +48,12 @@ export const Badge: React.FC<BadgeProps> = ({
     switch (status) {
       case 'active':
         styleClass =
-          'bg-[var(--color-brand-soft)] text-[var(--color-brand)] border-[var(--color-brand)]/20 font-medium';
-        prefixSymbol = <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)] mr-1.5 inline-block shrink-0" />;
+          'bg-[var(--color-status-active-soft)] text-[var(--color-status-active)] border-[var(--color-status-active)]/30 font-medium';
+        prefixSymbol = <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-status-active)] mr-1.5 inline-block shrink-0 shadow-[0_0_6px_currentColor]" />;
         break;
       case 'paused':
         styleClass =
-          'bg-[var(--color-warning-soft)] text-[var(--color-warning)] border-[var(--color-warning)]/20 font-medium';
+          'bg-[var(--color-status-paused-soft)] text-[var(--color-status-paused)] border-[var(--color-status-paused)]/30 font-medium';
         prefixSymbol = <span className="text-[10px] font-mono mr-1 shrink-0">❚❚</span>;
         break;
       case 'abandoned':
@@ -62,12 +62,12 @@ export const Badge: React.FC<BadgeProps> = ({
         break;
       case 'revived':
         styleClass =
-          'bg-[var(--color-accent-soft)] text-[var(--color-accent)] border-[var(--color-accent)]/20 font-semibold';
+          'bg-[var(--color-accent-soft)] text-[#E879F9] border-[var(--color-accent)]/35 font-semibold shadow-[0_0_10px_rgba(192,38,211,0.2)]';
         prefixSymbol = <span className="text-[11px] mr-1 shrink-0">↺</span>;
         break;
       case 'completed':
         styleClass =
-          'bg-[var(--color-success-soft)] text-[var(--color-success)] border-[var(--color-success)]/20 font-medium';
+          'bg-[var(--color-success-soft)] text-[var(--color-success)] border-[var(--color-success)]/30 font-medium';
         prefixSymbol = <span className="text-xs mr-1 shrink-0">✓</span>;
         break;
       case 'archived':

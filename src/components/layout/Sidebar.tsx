@@ -42,7 +42,7 @@ export function Sidebar() {
     >
       {/* Brand Header */}
       <div className="flex items-center gap-3 px-4 h-[68px] border-b border-[var(--color-border)] shrink-0">
-        <div className="w-[36px] h-[36px] rounded-[var(--radius-md)] bg-[var(--color-brand)] text-[var(--color-brand-contrast)] flex items-center justify-center shrink-0 shadow-2xs">
+        <div className="w-[36px] h-[36px] rounded-[var(--radius-md)] bg-gradient-to-br from-[#8B2FE8] to-[#C026D3] text-white flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(139,47,232,0.4)]">
           <Archive className="w-4.5 h-4.5 stroke-[2.2]" />
         </div>
 
@@ -69,12 +69,12 @@ export function Sidebar() {
         </AnimatePresence>
       </div>
 
-      {/* Primary Action: New Project */}
+      {/* Primary Action: New Project (Gradient CTA) */}
       <div className="p-3">
         <NavLink to="/projects/new">
           <button
-            className={`w-full h-[44px] flex items-center rounded-[var(--radius-md)] font-medium text-sm transition-all duration-150 cursor-pointer shadow-2xs select-none
-              bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]
+            className={`w-full h-[44px] flex items-center rounded-[var(--radius-md)] font-medium text-sm transition-all duration-150 cursor-pointer select-none
+              bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white hover:from-[#9D47F4] hover:to-[#D946EF] shadow-[0_0_18px_rgba(139,47,232,0.35)] border border-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]
               ${
                 sidebarCollapsed
                   ? 'justify-center p-2'
@@ -98,25 +98,25 @@ export function Sidebar() {
               key={path}
               to={path}
               className={`
-                group relative flex items-center h-[42px] rounded-[var(--radius-md)] text-sm font-medium transition-colors duration-150 cursor-pointer select-none
+                group relative flex items-center h-[42px] rounded-[var(--radius-md)] text-sm font-medium transition-all duration-150 cursor-pointer select-none
                 ${sidebarCollapsed ? 'justify-center px-2' : 'px-3 gap-3'}
                 ${
                   isActive
-                    ? 'bg-[var(--color-nav-selected)] text-[var(--color-brand)] font-semibold'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+                    ? 'bg-[var(--color-nav-selected)] text-[var(--color-text)] border border-[var(--color-brand)]/40 font-semibold shadow-[0_0_14px_rgba(139,47,232,0.18)]'
+                    : 'text-[var(--color-text-secondary)] border border-transparent hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
                 }
               `}
               title={sidebarCollapsed ? label : undefined}
             >
-              {/* 3px Brand Indicator */}
+              {/* Brand Indicator */}
               {isActive && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[var(--color-brand)]" />
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-[#8B2FE8] to-[#C026D3] shadow-[0_0_8px_#C026D3]" />
               )}
 
               <Icon
                 className={`w-[18px] h-[18px] shrink-0 ${
                   isActive
-                    ? 'text-[var(--color-brand)]'
+                    ? 'text-[#C026D3]'
                     : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'
                 }`}
               />
@@ -125,7 +125,7 @@ export function Sidebar() {
                 <div className="flex items-center justify-between flex-1 truncate">
                   <span className="truncate">{label}</span>
                   {badge && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-[var(--color-surface-subtle)] text-[var(--color-brand)] font-bold">
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-[#351C52] text-[#F0ABFC] border border-[#8B2FE8]/40 font-bold">
                       {badge}
                     </span>
                   )}

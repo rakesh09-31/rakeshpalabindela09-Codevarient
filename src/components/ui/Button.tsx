@@ -1,7 +1,7 @@
 import React from 'react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost' | 'danger' | 'mint' | 'coral' | 'revival';
+  variant?: 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost' | 'danger' | 'mint' | 'coral' | 'revival' | 'gradient' | 'fusion';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
@@ -27,15 +27,19 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variants = {
     primary:
-      'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] shadow-2xs active:scale-[0.98]',
+      'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] shadow-[0_0_14px_rgba(139,47,232,0.3)] active:scale-[0.98]',
+    gradient:
+      'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white hover:from-[#9D47F4] hover:to-[#D946EF] shadow-[0_0_20px_rgba(192,38,211,0.4)] border border-white/20 active:scale-[0.98]',
+    fusion:
+      'bg-gradient-to-r from-[#8B2FE8] via-[#A838E8] to-[#C026D3] text-white hover:from-[#9D47F4] hover:to-[#D946EF] shadow-[0_0_24px_rgba(192,38,211,0.45)] border border-white/20 active:scale-[0.98]',
     mint:
-      'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] shadow-2xs active:scale-[0.98]',
+      'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] shadow-[0_0_14px_rgba(139,47,232,0.3)] active:scale-[0.98]',
     accent:
-      'bg-[var(--color-accent)] text-[var(--color-brand-contrast)] hover:bg-[var(--color-accent-hover)] shadow-2xs active:scale-[0.98]',
+      'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] shadow-[0_0_16px_rgba(192,38,211,0.35)] active:scale-[0.98]',
     coral:
-      'bg-[var(--color-accent)] text-[var(--color-brand-contrast)] hover:bg-[var(--color-accent-hover)] shadow-2xs active:scale-[0.98]',
+      'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] shadow-[0_0_16px_rgba(192,38,211,0.35)] active:scale-[0.98]',
     revival:
-      'bg-[var(--color-accent)] text-[var(--color-brand-contrast)] hover:bg-[var(--color-accent-hover)] shadow-2xs active:scale-[0.98]',
+      'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white hover:from-[#9D47F4] hover:to-[#D946EF] shadow-[0_0_18px_rgba(192,38,211,0.35)] border border-white/15 active:scale-[0.98]',
     secondary:
       'bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] hover:border-[var(--color-border-strong)] active:scale-[0.98]',
     outline:

@@ -32,11 +32,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={`
-              w-full h-[42px] appearance-none rounded-[var(--radius-md)] border bg-[var(--color-surface)]
+              w-full h-[42px] appearance-none rounded-[var(--radius-md)] border bg-[var(--color-input)]
               px-3.5 py-2 pr-10 text-sm text-[var(--color-text)]
               transition-colors duration-150
               focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20
-              disabled:opacity-50 disabled:cursor-not-allowed
+              disabled:opacity-40 disabled:cursor-not-allowed
               cursor-pointer
               ${
                 error
@@ -49,7 +49,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             {...props}
           >
             {placeholder && (
-              <option value="" disabled>
+              <option value="" disabled className="bg-[var(--color-surface)] text-[var(--color-text-muted)]">
                 {placeholder}
               </option>
             )}
@@ -59,7 +59,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
             <ChevronDown className="h-4 w-4" />
           </span>
         </div>

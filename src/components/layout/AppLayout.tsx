@@ -14,6 +14,7 @@ import { useApp } from '../../contexts/AppContext';
 export function AppLayout() {
   const { sidebarCollapsed, mobileDrawerOpen, setMobileDrawerOpen } = useApp();
   const location = useLocation();
+  const isStudio = location.pathname === '/revival-studio';
 
   // Handle Escape key to close mobile drawer
   useEffect(() => {
@@ -27,7 +28,7 @@ export function AppLayout() {
   }, [mobileDrawerOpen, setMobileDrawerOpen]);
 
   return (
-    <div className="min-h-screen bg-[var(--color-page)] text-[var(--color-text)] transition-colors flex flex-col">
+    <div className={`bg-[var(--color-page)] text-[var(--color-text)] transition-colors flex flex-col ${isStudio ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar />
@@ -52,12 +53,12 @@ export function AppLayout() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              className="fixed left-0 top-0 bottom-0 w-[280px] bg-[var(--color-surface)] border-r border-[var(--color-border)] shadow-[var(--shadow-popover)] flex flex-col p-4 z-50"
+              className="fixed left-0 top-0 bottom-0 w-[280px] bg-[var(--color-sidebar)] border-r border-[var(--color-border)] shadow-[var(--shadow-popover)] flex flex-col p-4 z-50"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-[34px] h-[34px] rounded-[var(--radius-md)] bg-[var(--color-brand)] text-[var(--color-brand-contrast)] flex items-center justify-center shadow-2xs">
+                  <div className="w-[34px] h-[34px] rounded-[var(--radius-md)] bg-gradient-to-br from-[#8B2FE8] to-[#C026D3] text-white flex items-center justify-center shadow-[0_0_12px_rgba(139,47,232,0.4)]">
                     <Archive className="w-4 h-4" />
                   </div>
                   <div>
@@ -85,7 +86,7 @@ export function AppLayout() {
               {/* Action Button */}
               <div className="pt-3 pb-2">
                 <NavLink to="/projects/new" onClick={() => setMobileDrawerOpen(false)}>
-                  <button className="w-full h-[42px] flex items-center justify-center gap-2 bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] rounded-[var(--radius-md)] text-xs font-semibold shadow-2xs transition-colors">
+                  <button className="w-full h-[42px] flex items-center justify-center gap-2 bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white rounded-[var(--radius-md)] text-xs font-semibold shadow-[0_0_15px_rgba(139,47,232,0.35)] border border-white/15 transition-all">
                     <Plus className="w-4 h-4" /> New Project
                   </button>
                 </NavLink>
@@ -104,7 +105,7 @@ export function AppLayout() {
                         flex items-center justify-between px-3 h-[42px] rounded-[var(--radius-md)] text-xs font-medium transition-colors
                         ${
                           isActive
-                            ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand)] font-semibold'
+                            ? 'bg-[var(--color-nav-selected)] text-white border border-[#8B2FE8]/40 font-semibold shadow-[0_0_12px_rgba(139,47,232,0.18)]'
                             : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]'
                         }
                       `}
@@ -129,15 +130,21 @@ export function AppLayout() {
 
       {/* Main Content Area */}
       <div
-        className={`transition-all duration-200 min-h-screen flex flex-col ${
-          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'
-        }`}
+        className={`transition-all duration-200 flex flex-col ${
+          isStudio ? 'h-screen overflow-hidden' : 'min-h-screen'
+        } ${sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'}`}
       >
         <Header />
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-8 w-full max-w-[1440px] mx-auto">
+        <main
+          className={`w-full max-w-[1440px] mx-auto ${
+            isStudio
+              ? 'flex-1 min-h-0 overflow-hidden flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4'
+              : 'flex-1 px-4 sm:px-6 md:px-8 py-8'
+          }`}
+        >
           <Outlet />
         </main>
-        <Footer />
+        {!isStudio && <Footer />}
       </div>
     </div>
   );

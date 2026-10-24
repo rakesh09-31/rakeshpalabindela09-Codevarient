@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Save,
@@ -22,7 +22,10 @@ export default function ProjectFormPage() {
   const isEditing = Boolean(id);
   const existingProject = projects.find((p) => p.id === id);
 
-  const [activeSection, setActiveSection] = useState<'basics' | 'tech' | 'progress' | 'memory'>('basics');
+  const [searchParams] = useSearchParams();
+  const [activeSection, setActiveSection] = useState<'basics' | 'tech' | 'progress' | 'memory'>(
+    () => (searchParams.get('section') as any) || 'basics'
+  );
 
   // Form State
   const [title, setTitle] = useState('');
@@ -150,9 +153,9 @@ export default function ProjectFormPage() {
       libraries,
       apis,
       tools,
-      repoUrl: repoUrl.trim() || undefined,
-      demoUrl: demoUrl.trim() || undefined,
-      readmeUrl: readmeUrl.trim() || undefined,
+      repoUrl: repoUrl.trim() ? repoUrl.trim() : (isEditing ? '' : undefined),
+      demoUrl: demoUrl.trim() ? demoUrl.trim() : (isEditing ? '' : undefined),
+      readmeUrl: readmeUrl.trim() ? readmeUrl.trim() : (isEditing ? '' : undefined),
 
       status,
       startDate: new Date(startDate || Date.now()).toISOString(),
@@ -236,13 +239,13 @@ export default function ProjectFormPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:text-[var(--color-text-muted)] dark:hover:text-[var(--color-text)] transition-colors cursor-pointer self-start"
+          className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]  dark:hover:text-[var(--color-text)] transition-colors cursor-pointer self-start"
         >
           <ArrowLeft className="w-4 h-4" /> Cancel & Return
         </button>
 
         <h1
-          className="text-xl md:text-2xl font-bold text-[var(--color-text)] dark:text-[var(--color-text)] tracking-tight"
+          className="text-xl md:text-2xl font-bold text-[var(--color-text)]  tracking-tight"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {isEditing ? `Edit: ${existingProject?.title || 'Project'}` : 'Plant New Project'}
@@ -259,7 +262,7 @@ export default function ProjectFormPage() {
       </div>
 
       {/* Multi-Section Tabs */}
-      <div className="bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 rounded-2xl p-1.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 border border-[var(--color-border)] dark:border-[var(--color-border)]/80">
+      <div className="bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 rounded-2xl p-1.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 border border-[var(--color-border)]">
         {[
           { id: 'basics', label: '1. Basics & Spark', icon: Layers },
           { id: 'tech', label: '2. Tech Stack', icon: Code2 },
@@ -275,8 +278,8 @@ export default function ProjectFormPage() {
               onClick={() => setActiveSection(sec.id as any)}
               className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white font-semibold shadow-2xs'
-                  : 'text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)] hover:text-[var(--color-text)] dark:hover:text-white'
+                  ? 'bg-[var(--color-brand)] text-white dark:bg-[var(--color-brand)] dark:text-white font-semibold shadow-xs'
+                  : 'text-[var(--color-text-secondary)]  hover:text-[var(--color-text)] dark:hover:text-white'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -287,11 +290,11 @@ export default function ProjectFormPage() {
       </div>
 
       {/* Form Container */}
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] dark:border-[var(--color-border)]/80 p-6 md:p-8 shadow-2xs space-y-6">
+      <form onSubmit={handleSubmit} className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-6 md:p-8 shadow-xs space-y-6">
         {/* ================= SECTION 1: BASICS ================= */}
         {activeSection === 'basics' && (
           <div className="space-y-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)]  border-b border-[var(--color-border)] border-[var(--color-border)] pb-2">
               Project Identity & Vision
             </h2>
 
@@ -315,13 +318,13 @@ export default function ProjectFormPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Category / Domain
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 >
                   <option value="Web App">Web App</option>
                   <option value="Mobile App">Mobile App</option>
@@ -336,13 +339,13 @@ export default function ProjectFormPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Visibility
                 </label>
                 <select
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value as ProjectVisibility)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 >
                   <option value="private">Private (Only You)</option>
                   <option value="team">Team (Collaborators)</option>
@@ -377,14 +380,14 @@ export default function ProjectFormPage() {
 
             {/* Tags */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Tags
               </label>
               <div className="flex flex-wrap items-center gap-1.5 mb-2">
                 {tags.map((t) => (
                   <span
                     key={t}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
+                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)]  border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
                   >
                     #{t}
                     <button
@@ -408,7 +411,7 @@ export default function ProjectFormPage() {
                     }
                   }}
                   placeholder="Add a tag and press Enter"
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -426,20 +429,20 @@ export default function ProjectFormPage() {
         {/* ================= SECTION 2: TECH STACK ================= */}
         {activeSection === 'tech' && (
           <div className="space-y-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)]  border-b border-[var(--color-border)] border-[var(--color-border)] pb-2">
               Technology Stack & URLs
             </h2>
 
             {/* Languages */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Programming Languages
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {languages.map((l) => (
                   <span
                     key={l}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
+                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)]  border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
                   >
                     {l}
                     <button
@@ -457,7 +460,7 @@ export default function ProjectFormPage() {
                   value={newLanguage}
                   onChange={(e) => setNewLanguage(e.target.value)}
                   placeholder="e.g. TypeScript, Python, Rust"
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -472,14 +475,14 @@ export default function ProjectFormPage() {
 
             {/* Frameworks */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Frameworks
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {frameworks.map((f) => (
                   <span
                     key={f}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)] dark:text-[var(--color-text)] border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
+                    className="text-xs px-2.5 py-1 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 text-[var(--color-text)]  border border-[var(--color-border)] dark:border-[var(--color-border-strong)] flex items-center gap-1.5 font-mono"
                   >
                     {f}
                     <button
@@ -497,7 +500,7 @@ export default function ProjectFormPage() {
                   value={newFramework}
                   onChange={(e) => setNewFramework(e.target.value)}
                   placeholder="e.g. React, Next.js, FastAPI"
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  w-64 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -513,14 +516,14 @@ export default function ProjectFormPage() {
             {/* Libraries & APIs & Tools */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Libraries & Dependencies
                 </label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {libraries.map((lib) => (
                     <span
                       key={lib}
-                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] flex items-center gap-1 font-mono"
+                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)]  flex items-center gap-1 font-mono"
                     >
                       {lib}
                       <button
@@ -538,7 +541,7 @@ export default function ProjectFormPage() {
                     value={newLibrary}
                     onChange={(e) => setNewLibrary(e.target.value)}
                     placeholder="e.g. Tailwind, Zustand"
-                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                   />
                   <Button
                     type="button"
@@ -552,14 +555,14 @@ export default function ProjectFormPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   APIs & External Services
                 </label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {apis.map((a) => (
                     <span
                       key={a}
-                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] flex items-center gap-1 font-mono"
+                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)]  flex items-center gap-1 font-mono"
                     >
                       {a}
                       <button
@@ -577,7 +580,7 @@ export default function ProjectFormPage() {
                     value={newApi}
                     onChange={(e) => setNewApi(e.target.value)}
                     placeholder="e.g. OpenAI API, Stripe"
-                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                   />
                   <Button
                     type="button"
@@ -591,14 +594,14 @@ export default function ProjectFormPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Tools, Utilities & Dependencies
                 </label>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {tools.map((t) => (
                     <span
                       key={t}
-                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)] dark:text-[var(--color-text-secondary)] flex items-center gap-1 font-mono"
+                      className="text-xs px-2 py-0.5 rounded-lg bg-[var(--color-surface-subtle)] dark:bg-[var(--color-brand)]/60 border border-[var(--color-border)] dark:border-[var(--color-border-strong)] text-[var(--color-text-secondary)]  flex items-center gap-1 font-mono"
                     >
                       {t}
                       <button
@@ -616,7 +619,7 @@ export default function ProjectFormPage() {
                     value={newTool}
                     onChange={(e) => setNewTool(e.target.value)}
                     placeholder="e.g. Vite, Docker, Turborepo"
-                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                    className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  w-full focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                   />
                   <Button
                     type="button"
@@ -633,19 +636,20 @@ export default function ProjectFormPage() {
             {/* Links */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
               <Input
-                label="GitHub Repository URL"
+                label="Repository URL (optional)"
+                hint="Add a GitHub or Git repository link when you have one. You can add it later."
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
                 placeholder="https://github.com/..."
               />
               <Input
-                label="Live Demo URL"
+                label="Live Demo URL (optional)"
                 value={demoUrl}
                 onChange={(e) => setDemoUrl(e.target.value)}
                 placeholder="https://preview.dev"
               />
               <Input
-                label="README URL"
+                label="README URL (optional)"
                 value={readmeUrl}
                 onChange={(e) => setReadmeUrl(e.target.value)}
                 placeholder="https://github.com/...#readme"
@@ -657,19 +661,19 @@ export default function ProjectFormPage() {
         {/* ================= SECTION 3: PROGRESS & SCOPE ================= */}
         {activeSection === 'progress' && (
           <div className="space-y-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)]  border-b border-[var(--color-border)] border-[var(--color-border)] pb-2">
               Scope & Feature Roadmap
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Status
                 </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 >
                   <option value="active">Active</option>
                   <option value="paused">Paused</option>
@@ -681,40 +685,40 @@ export default function ProjectFormPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Start Date
                 </label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+                <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                   Target Completion Date
                 </label>
                 <input
                   type="date"
                   value={plannedCompletionDate}
                   onChange={(e) => setPlannedCompletionDate(e.target.value)}
-                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
               </div>
             </div>
 
             {/* Completed Features */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text)]  flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Completed Features
               </label>
               <div className="space-y-1.5 mb-2">
                 {completedFeatures.map((f) => (
                   <div
                     key={f}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-[var(--color-text-muted)]">✓</span> {f}
@@ -734,7 +738,7 @@ export default function ProjectFormPage() {
                   value={newCompletedFeature}
                   onChange={(e) => setNewCompletedFeature(e.target.value)}
                   placeholder="Add a completed milestone feature..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -749,14 +753,14 @@ export default function ProjectFormPage() {
 
             {/* In-Progress Features */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text)]  flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
                 <span className="font-mono text-xs">❚❚</span> In-Progress Features
               </label>
               <div className="space-y-1.5 mb-2">
                 {inProgressFeatures.map((f) => (
                   <div
                     key={f}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span className="flex items-center gap-2">
                       <span className="font-mono text-[10px] text-[var(--color-text-muted)]">❚❚</span> {f}
@@ -776,7 +780,7 @@ export default function ProjectFormPage() {
                   value={newInProgressFeature}
                   onChange={(e) => setNewInProgressFeature(e.target.value)}
                   placeholder="Add feature in development..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -791,14 +795,14 @@ export default function ProjectFormPage() {
 
             {/* Planned & Unfinished Features */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)]  flex items-center gap-1.5 mb-1.5 font-mono uppercase tracking-wider">
                 <span>+</span> Planned & Unfinished Features
               </label>
               <div className="space-y-1.5 mb-2">
                 {plannedFeatures.map((f) => (
                   <div
                     key={f}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)]/80 flex items-center justify-between text-[var(--color-text-secondary)] dark:text-[var(--color-text-muted)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text-secondary)] "
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-[var(--color-text-muted)]">+</span> {f}
@@ -818,7 +822,7 @@ export default function ProjectFormPage() {
                   value={newPlannedFeature}
                   onChange={(e) => setNewPlannedFeature(e.target.value)}
                   placeholder="Add planned next feature..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -836,7 +840,7 @@ export default function ProjectFormPage() {
         {/* ================= SECTION 4: BLOCKERS & MEMORY ================= */}
         {activeSection === 'memory' && (
           <div className="space-y-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] border-b border-[var(--color-border)] dark:border-[var(--color-border)]/80 pb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--color-text-muted)]  border-b border-[var(--color-border)] border-[var(--color-border)] pb-2">
               Abandonment Reason & Memory Preservation
             </h2>
 
@@ -850,14 +854,14 @@ export default function ProjectFormPage() {
 
             {/* Technical Blockers */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Technical Blockers
               </label>
               <div className="space-y-1.5 mb-2">
                 {technicalBlockers.map((b) => (
                   <div
                     key={b}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span>{b}</span>
                     <button
@@ -875,7 +879,7 @@ export default function ProjectFormPage() {
                   value={newBlocker}
                   onChange={(e) => setNewBlocker(e.target.value)}
                   placeholder="e.g. Rate limiting on 500-line PRs, or strict NAT traversal..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -890,14 +894,14 @@ export default function ProjectFormPage() {
 
             {/* Lessons Learned */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Lessons Learned & Retrospective
               </label>
               <div className="space-y-1.5 mb-2">
                 {lessonsLearned.map((l) => (
                   <div
                     key={l}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span>{l}</span>
                     <button
@@ -915,7 +919,7 @@ export default function ProjectFormPage() {
                   value={newLesson}
                   onChange={(e) => setNewLesson(e.target.value)}
                   placeholder="e.g. Don't use heavy WebRTC mesh for audio-only rooms..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -930,14 +934,14 @@ export default function ProjectFormPage() {
 
             {/* Missing Skills & Resources */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text-muted)] dark:text-[var(--color-text-muted)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text-muted)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Missing Skills & Required Resources
               </label>
               <div className="space-y-1.5 mb-2">
                 {missingSkills.map((s) => (
                   <div
                     key={s}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span>{s}</span>
                     <button
@@ -955,7 +959,7 @@ export default function ProjectFormPage() {
                   value={newMissingSkill}
                   onChange={(e) => setNewMissingSkill(e.target.value)}
                   placeholder="e.g. WebRTC TURN configuration, PyTorch CUDA optimization..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -970,14 +974,14 @@ export default function ProjectFormPage() {
 
             {/* Known Bugs & Issues */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Known Bugs & Open Issues
               </label>
               <div className="space-y-1.5 mb-2">
                 {knownBugs.map((b) => (
                   <div
                     key={b}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span>{b}</span>
                     <button
@@ -995,7 +999,7 @@ export default function ProjectFormPage() {
                   value={newBug}
                   onChange={(e) => setNewBug(e.target.value)}
                   placeholder="e.g. Safari microphone permission deadlock on iOS 17..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -1010,14 +1014,14 @@ export default function ProjectFormPage() {
 
             {/* Recommended Next Steps */}
             <div>
-              <label className="text-xs font-semibold text-[var(--color-text)] dark:text-[var(--color-text)] block mb-1.5 font-mono uppercase tracking-wider">
+              <label className="text-xs font-semibold text-[var(--color-text)]  block mb-1.5 font-mono uppercase tracking-wider">
                 Recommended Next Steps for Revival
               </label>
               <div className="space-y-1.5 mb-2">
                 {nextSteps.map((step) => (
                   <div
                     key={step}
-                    className="text-xs p-2.5 rounded-xl bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 border border-[var(--color-border)] dark:border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] dark:text-[var(--color-text)]"
+                    className="text-xs p-2.5 rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-center justify-between text-[var(--color-text)] "
                   >
                     <span>{step}</span>
                     <button
@@ -1035,7 +1039,7 @@ export default function ProjectFormPage() {
                   value={newNextStep}
                   onChange={(e) => setNewNextStep(e.target.value)}
                   placeholder="e.g. Migrate to hosted LiveKit instance, replace AST regex..."
-                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] dark:border-[var(--color-border)] bg-[var(--color-brand-soft)]/50 dark:bg-[var(--color-brand)]/40 text-[var(--color-text)] dark:text-[var(--color-text)] flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
+                  className="px-3.5 py-2 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]  flex-1 focus:outline-none focus:border-zinc-900 dark:focus:border-[var(--color-border)]"
                 />
                 <Button
                   type="button"
@@ -1051,7 +1055,7 @@ export default function ProjectFormPage() {
         )}
 
         {/* Form Bottom Navigation Controls */}
-        <div className="flex items-center justify-between pt-6 border-t border-[var(--color-border)] dark:border-[var(--color-border)]/80">
+        <div className="flex items-center justify-between pt-6 border-t border-[var(--color-border)] border-[var(--color-border)]">
           <div className="flex gap-2">
             {activeSection !== 'basics' && (
               <Button

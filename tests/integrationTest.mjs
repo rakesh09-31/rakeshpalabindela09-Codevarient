@@ -149,6 +149,22 @@ async function runTests() {
   assert(src1.timeline.some(t => t.type === 'fused'), 'Source project 1 must log fused timeline event');
   console.log(`  ✓ Fusion approved & planted: Project ${newProject.id} created with lineage from proj-2 & proj-5.\n`);
 
+  // Clean up test fusion artifacts so test runs do not contaminate the database
+  dbManager.deleteProject(newProject.id);
+  dbManager.deleteFusion(proposal.id);
+  const p2Restore = dbManager.getProject('proj-2');
+  if (p2Restore) {
+    p2Restore.fusedInto = undefined;
+    p2Restore.timeline = p2Restore.timeline.filter((t) => t.type !== 'fused');
+    dbManager.updateProject('proj-2', { fusedInto: undefined, timeline: p2Restore.timeline });
+  }
+  const p5Restore = dbManager.getProject('proj-5');
+  if (p5Restore) {
+    p5Restore.fusedInto = undefined;
+    p5Restore.timeline = p5Restore.timeline.filter((t) => t.type !== 'fused');
+    dbManager.updateProject('proj-5', { fusedInto: undefined, timeline: p5Restore.timeline });
+  }
+
   // Test 6: Teams and Reminders CRUD
   console.log('Test 6: Teams and Reminders CRUD');
   const newTeam = dbManager.createTeam({
@@ -181,6 +197,13 @@ async function runTests() {
   });
   assert.strictEqual(newRem.status, 'upcoming');
   console.log(`  ✓ Reminder created: "${newRem.title}"`);
+
+  // Complete and verify CRUD cleanup so tests do not accumulate duplicate records
+  dbManager.deleteReminder(newRem.id);
+  assert.strictEqual(dbManager.getReminders().some(r => r.id === newRem.id), false, 'Reminder should be deleted after CRUD test');
+  dbManager.deleteTeam(newTeam.id);
+  assert.strictEqual(dbManager.getTeams().some(t => t.id === newTeam.id), false, 'Team should be deleted after CRUD test');
+  console.log('  ✓ Test team and reminder cleanly deleted after CRUD verification.\n');
 
   // Test 7: Startup Screen & Vector Brand Mark Verification
   console.log('Test 7: Startup Screen & Vector Brand Mark Verification');

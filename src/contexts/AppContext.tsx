@@ -53,6 +53,9 @@ interface AppContextType {
   // Reminders
   createReminder: (data: Omit<Reminder, 'id' | 'createdAt' | 'status'>) => Reminder;
   cancelReminder: (id: string) => Reminder;
+  completeReminder: (id: string) => Reminder;
+  snoozeReminder: (id: string, hours?: number) => Reminder;
+  restoreReminder: (id: string) => Reminder;
   deleteReminder: (id: string) => void;
 
   // Notifications
@@ -82,17 +85,58 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [fusionProposals, setFusionProposals] = useState<FusionProposal[]>([]);
-  const [userProfile, setUserProfile] = useState<UserProfile>({} as UserProfile);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    try {
+      storageService.initialize();
+      return storageService.getProjects();
+    } catch {
+      return [];
+    }
+  });
+  const [teams, setTeams] = useState<Team[]>(() => {
+    try {
+      return storageService.getTeams();
+    } catch {
+      return [];
+    }
+  });
+  const [reminders, setReminders] = useState<Reminder[]>(() => {
+    try {
+      return storageService.getReminders();
+    } catch {
+      return [];
+    }
+  });
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    try {
+      return storageService.getNotifications();
+    } catch {
+      return [];
+    }
+  });
+  const [fusionProposals, setFusionProposals] = useState<FusionProposal[]>(() => {
+    try {
+      return storageService.getFusionProposals();
+    } catch {
+      return [];
+    }
+  });
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    try {
+      return storageService.getUserProfile();
+    } catch {
+      return {} as UserProfile;
+    }
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  const [initialized, setInitialized] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const queryTheme = new URLSearchParams(window.location.search).get('theme');
+        if (queryTheme === 'dark' || queryTheme === 'light') return queryTheme;
+      }
       const saved = localStorage.getItem('graveyard_theme');
       if (saved === 'dark' || saved === 'light') return saved;
       if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -101,7 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // fallback
     }
-    return 'light';
+    return 'dark';
   });
 
   useEffect(() => {
@@ -226,7 +270,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const changeProjectStatus = useCallback((id: string, status: ProjectStatus, note?: string) => {
     const res = storageService.changeProjectStatus(id, status, note);
     setProjects(storageService.getProjects());
-    apiClient.updateProject(id, { status }, note).catch(() => {});
+    apiClient.updateProject(id, {
+      status,
+      pauseDate: res.pauseDate,
+      completionDate: res.completionDate,
+    }, note).catch(() => {});
     return res;
   }, []);
 
@@ -328,12 +376,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const cancelReminder = useCallback((id: string) => {
     const res = storageService.cancelReminder(id);
     setReminders(storageService.getReminders());
+    apiClient.updateReminder(id, { status: 'cancelled', enabled: false }).catch(() => {});
+    return res;
+  }, []);
+
+  const completeReminder = useCallback((id: string) => {
+    const res = storageService.completeReminder(id);
+    setReminders(storageService.getReminders());
+    apiClient.updateReminder(id, { status: 'completed', enabled: false }).catch(() => {});
+    return res;
+  }, []);
+
+  const snoozeReminder = useCallback((id: string, hours: number = 24) => {
+    const res = storageService.snoozeReminder(id, hours);
+    setReminders(storageService.getReminders());
+    apiClient.updateReminder(id, { dateTime: res.dateTime, status: 'upcoming', enabled: true }).catch(() => {});
+    return res;
+  }, []);
+
+  const restoreReminder = useCallback((id: string) => {
+    const res = storageService.restoreReminder(id);
+    setReminders(storageService.getReminders());
+    apiClient.updateReminder(id, { status: 'upcoming', enabled: true }).catch(() => {});
     return res;
   }, []);
 
   const deleteReminder = useCallback((id: string) => {
     storageService.deleteReminder(id);
     setReminders(storageService.getReminders());
+    apiClient.deleteReminder(id).catch(() => {});
   }, []);
 
   // Notifications
@@ -419,6 +490,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         removeMember,
         createReminder,
         cancelReminder,
+        completeReminder,
+        snoozeReminder,
+        restoreReminder,
         deleteReminder,
         markNotificationRead,
         markAllNotificationsRead,

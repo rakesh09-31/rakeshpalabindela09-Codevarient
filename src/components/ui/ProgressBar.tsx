@@ -31,7 +31,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   const isAccent = variant === 'accent' || variant === 'coral';
-  const fillColor = isAccent ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-brand)]';
+  const fillColor = isAccent
+    ? 'bg-gradient-to-r from-[#C026D3] to-[#E879F9] shadow-[0_0_8px_rgba(192,38,211,0.5)]'
+    : 'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] shadow-[0_0_8px_rgba(139,47,232,0.4)]';
 
   return (
     <div className={`w-full ${className}`}>

@@ -738,7 +738,6 @@ export const INITIAL_PROJECTS: Project[] = [
     libraries: ['Tailwind', 'Howler.js', 'Yjs', 'Lucide React'],
     apis: ['Spotify Web Playback SDK', 'Web Audio API'],
     tools: ['Vite', 'Docker', 'PostgreSQL'],
-    repoUrl: 'https://github.com/alexrivera/studysync',
     demoUrl: 'https://studysync-rooms.dev',
     readmeUrl: 'https://github.com/alexrivera/studysync#setup',
 

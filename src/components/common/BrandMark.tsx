@@ -18,10 +18,10 @@ export function BrandMark({ size, className = '' }: BrandMarkProps) {
       } ${className}`}
       style={{
         ...(isCustomSize ? { width: size, height: size } : {}),
-        background: 'linear-gradient(145deg, #203D3A 0%, #152B28 50%, #0F1F1D 100%)',
-        border: '1px solid rgba(66, 232, 180, 0.42)',
+        background: 'linear-gradient(135deg, #4568DC 0%, #8B2FE8 48%, #C026D3 100%)',
+        border: '1px solid rgba(255, 255, 255, 0.32)',
         boxShadow:
-          '0 20px 48px -8px rgba(66, 232, 180, 0.35), 0 0 28px 2px rgba(66, 232, 180, 0.18), inset 0 0 0 1px rgba(66, 232, 180, 0.22)',
+          '0 20px 50px -8px rgba(139, 47, 232, 0.75), 0 0 32px 4px rgba(192, 38, 211, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.24)',
       }}
       role="img"
       aria-label="The Project Graveyard brand mark"
@@ -45,8 +45,9 @@ export function BrandMark({ size, className = '' }: BrandMarkProps) {
             y2="24"
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0%" stopColor="#FFE082" />
-            <stop offset="100%" stopColor="#FFB86B" />
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="40%" stopColor="#F5D0FE" />
+            <stop offset="100%" stopColor="#C026D3" />
           </linearGradient>
           <filter id="pg-spark-bloom" x="12" y="2" width="24" height="26" filterUnits="userSpaceOnUse">
             <feGaussianBlur stdDeviation="1.5" result="glow" />
@@ -58,7 +59,7 @@ export function BrandMark({ size, className = '' }: BrandMarkProps) {
         {/* Left page */}
         <path
           d="M24 38C19 35.5 13 36 8 38.5V23C13 20.5 19 20 24 22.5V38Z"
-          fill="#E2F7F0"
+          fill="#F2EBFD"
           fillOpacity="0.95"
         />
         {/* Right page */}
@@ -69,25 +70,25 @@ export function BrandMark({ size, className = '' }: BrandMarkProps) {
         {/* Center Spine Divider */}
         <path
           d="M24 22.5V38.5"
-          stroke="#42E8B4"
+          stroke="#4C1D95"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
         {/* Page detail lines */}
         <path
           d="M12 26.5C15.5 25 19 25 21.5 26"
-          stroke="#85C7B3"
+          stroke="#C4B5FD"
           strokeWidth="1.2"
           strokeLinecap="round"
         />
         <path
           d="M26.5 26C29 25 32.5 25 36 26.5"
-          stroke="#85C7B3"
+          stroke="#C4B5FD"
           strokeWidth="1.2"
           strokeLinecap="round"
         />
 
-        {/* Luminous Warm Amber Revival Spark with Bloom Filter */}
+        {/* Luminous Magenta/Violet Revival Spark with Bloom Filter */}
         <path
           d="M24 6C24 11 20 15 15 15C20 15 24 19 24 24C24 19 28 15 33 15C28 15 24 11 24 6Z"
           fill="url(#pg-spark-grad)"
@@ -97,8 +98,8 @@ export function BrandMark({ size, className = '' }: BrandMarkProps) {
         <circle cx="24" cy="15" r="1.6" fill="#FFFFFF" />
 
         {/* Secondary micro-sparkles */}
-        <circle cx="14" cy="10" r="1.2" fill="#FFB86B" fillOpacity="0.9" />
-        <circle cx="34" cy="10" r="1.3" fill="#FFB86B" fillOpacity="0.9" />
+        <circle cx="14" cy="10" r="1.2" fill="#F5D0FE" fillOpacity="0.9" />
+        <circle cx="34" cy="10" r="1.3" fill="#F5D0FE" fillOpacity="0.9" />
       </svg>
     </div>
   );

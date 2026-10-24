@@ -149,6 +149,10 @@ export const storageService = {
       updatedAt: now,
     };
 
+    if ('repoUrl' in updates) {
+      updated.repoUrl = updates.repoUrl ? updates.repoUrl : undefined;
+    }
+
     if (timelineNote) {
       updated.timeline.unshift({
         id: `tl-${uuidv4().slice(0, 8)}`,
@@ -568,7 +572,12 @@ export const storageService = {
         this.saveReminders(INITIAL_REMINDERS);
         return INITIAL_REMINDERS;
       }
-      return JSON.parse(data);
+      const parsed: Reminder[] = JSON.parse(data);
+      const cleaned = parsed.filter((r) => !r.id.startsWith('rem-test-'));
+      if (cleaned.length !== parsed.length) {
+        this.saveReminders(cleaned);
+      }
+      return cleaned.length > 0 ? cleaned : INITIAL_REMINDERS;
     } catch (e) {
       console.error('Failed to load reminders:', e);
       return INITIAL_REMINDERS;
@@ -607,6 +616,42 @@ export const storageService = {
 
     rem.status = 'cancelled';
     rem.enabled = false;
+    this.saveReminders(reminders);
+    return rem;
+  },
+
+  completeReminder(id: string): Reminder {
+    const reminders = this.getReminders();
+    const rem = reminders.find((r) => r.id === id);
+    if (!rem) throw new Error('Reminder not found');
+
+    rem.status = 'completed';
+    rem.enabled = false;
+    this.saveReminders(reminders);
+    return rem;
+  },
+
+  snoozeReminder(id: string, hours: number = 24): Reminder {
+    const reminders = this.getReminders();
+    const rem = reminders.find((r) => r.id === id);
+    if (!rem) throw new Error('Reminder not found');
+
+    const currentDue = new Date(rem.dateTime).getTime();
+    const baseTime = isNaN(currentDue) || currentDue < Date.now() ? Date.now() : currentDue;
+    rem.dateTime = new Date(baseTime + hours * 3600000).toISOString();
+    rem.status = 'upcoming';
+    rem.enabled = true;
+    this.saveReminders(reminders);
+    return rem;
+  },
+
+  restoreReminder(id: string): Reminder {
+    const reminders = this.getReminders();
+    const rem = reminders.find((r) => r.id === id);
+    if (!rem) throw new Error('Reminder not found');
+
+    rem.status = 'upcoming';
+    rem.enabled = true;
     this.saveReminders(reminders);
     return rem;
   },
