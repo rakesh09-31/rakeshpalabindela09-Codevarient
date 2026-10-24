@@ -25,6 +25,11 @@ import {
   Layers,
   Cpu,
   SlidersHorizontal,
+  Play,
+  Pause,
+  Activity,
+  PauseCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { Badge, ProgressBar, Button } from '../components/ui';
@@ -115,6 +120,7 @@ function ProjectArtwork({
   project: Project;
   onClick?: () => void;
 }) {
+  const [imageError, setImageError] = useState(false);
   const theme = CATEGORY_THEMES[project.category] || {
     gradientLight: 'from-stone-50 via-neutral-100 to-stone-100',
     gradientDark: 'from-neutral-900 via-stone-900 to-zinc-950',
@@ -127,7 +133,13 @@ function ProjectArtwork({
   };
   const Icon = theme.icon;
 
-  if (project.attachments && project.attachments.length > 0 && project.attachments[0].url) {
+  const hasAttachmentImage =
+    !imageError &&
+    project.attachments &&
+    project.attachments.length > 0 &&
+    project.attachments[0].url;
+
+  if (hasAttachmentImage) {
     return (
       <div
         onClick={onClick}
@@ -136,6 +148,7 @@ function ProjectArtwork({
         <img
           src={project.attachments[0].url}
           alt={project.title}
+          onError={() => setImageError(true)}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
@@ -208,8 +221,21 @@ export function DashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'carousel' | 'grid' | 'list'>('carousel');
 
-  // Active slide index for carousel
-  const [activeIndex, setActiveIndex] = useState(0);
+  // Continuous Circular Carousel State Machine
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [animDirection, setAnimDirection] = useState<'next' | 'prev' | null>(null);
+  const isAnimatingRef = useRef(false);
+
+  // Autoplay State
+  const [isAutoplayActive, setIsAutoplayActive] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isTabVisible, setIsTabVisible] = useState(true);
+
+  // Hover Debounce on neighboring slides
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Thumbnail strip container ref for auto-scrolling
+  const thumbnailStripRef = useRef<HTMLDivElement>(null);
 
   // Viewport resize tracking for precise peeking side margins
   const [windowWidth, setWindowWidth] = useState(
@@ -227,12 +253,13 @@ export function DashboardPage() {
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Responsive slide layout metrics:
-  // Desktop: 72% slide width, 2.5% gap => 14% side peek on left & right
-  // Tablet:  84% slide width, 3% gap   => 8% side peek on left & right
-  // Mobile:  100% slide width, 4% gap  => focused single slide, zero page overflow
+  // Desktop: 72% slide width, 3% gap => 14% side peek on left & right
+  // Tablet:  84% slide width, 3% gap => 8% side peek on left & right
+  // Mobile:  100% slide width, 4% gap => focused single slide, zero page overflow
   const slideWidthPct = windowWidth >= 1024 ? 72 : windowWidth >= 640 ? 84 : 100;
-  const gapPct = windowWidth >= 1024 ? 2.5 : windowWidth >= 640 ? 3 : 4;
-  const sideOffset = (100 - slideWidthPct) / 2;
+  const gapPct = windowWidth >= 1024 ? 3 : windowWidth >= 640 ? 3 : 4;
+  const stepPct = slideWidthPct + gapPct;
+  const centerOffset = (100 - slideWidthPct) / 2;
 
   // Derive categories from actual project records
   const categories = useMemo(() => {
@@ -250,7 +277,7 @@ export function DashboardPage() {
   const completedCount = projects.filter((p) => p.status === 'completed').length;
   const readyToReviveCount = projects.filter((p) => {
     const isPaused = p.status === 'paused' || p.status === 'abandoned';
-    const score = 50 + Math.round(p.progress * 0.3) - p.technicalBlockers.length * 15;
+    const score = 50 + Math.round(p.progress * 0.3) - (p.technicalBlockers?.length || 0) * 15;
     return isPaused && score >= 40;
   }).length;
 
@@ -283,16 +310,46 @@ export function DashboardPage() {
   }, [projects, searchQuery, selectedStatus, selectedCategory]);
 
   // Safe slide index clamped to current filtered results
-  const safeIndex = Math.min(activeIndex, Math.max(0, filteredProjects.length - 1));
+  const safeIndex =
+    filteredProjects.length === 0
+      ? 0
+      : ((currentIndex % filteredProjects.length) + filteredProjects.length) % filteredProjects.length;
 
-  // Slide navigation callbacks
-  const handlePrev = useCallback(() => {
-    setActiveIndex((prev) => Math.max(0, prev - 1));
-  }, []);
-
+  // Circular Carousel Advance Actions
   const handleNext = useCallback(() => {
-    setActiveIndex((prev) => Math.min(filteredProjects.length - 1, prev + 1));
-  }, [filteredProjects.length]);
+    if (isAnimatingRef.current || filteredProjects.length <= 1) return;
+    if (prefersReducedMotion) {
+      setCurrentIndex((prev) => (prev + 1) % filteredProjects.length);
+      return;
+    }
+    isAnimatingRef.current = true;
+    setAnimDirection('next');
+  }, [filteredProjects.length, prefersReducedMotion]);
+
+  const handlePrev = useCallback(() => {
+    if (isAnimatingRef.current || filteredProjects.length <= 1) return;
+    if (prefersReducedMotion) {
+      setCurrentIndex((prev) => (prev - 1 + filteredProjects.length) % filteredProjects.length);
+      return;
+    }
+    isAnimatingRef.current = true;
+    setAnimDirection('prev');
+  }, [filteredProjects.length, prefersReducedMotion]);
+
+  // Handle completion of 450ms slide transition
+  useEffect(() => {
+    if (!animDirection || filteredProjects.length <= 1) return;
+    const timer = setTimeout(() => {
+      if (animDirection === 'next') {
+        setCurrentIndex((prev) => (prev + 1) % filteredProjects.length);
+      } else if (animDirection === 'prev') {
+        setCurrentIndex((prev) => (prev - 1 + filteredProjects.length) % filteredProjects.length);
+      }
+      setAnimDirection(null);
+      isAnimatingRef.current = false;
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [animDirection, filteredProjects.length]);
 
   // Keyboard navigation (ArrowLeft & ArrowRight)
   useEffect(() => {
@@ -321,6 +378,41 @@ export function DashboardPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePrev, handleNext, viewMode]);
 
+  // Tab visibility listener for pausing autoplay
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Autoplay Timer (6s gentle loop)
+  useEffect(() => {
+    if (
+      !isAutoplayActive ||
+      isHovered ||
+      !isTabVisible ||
+      prefersReducedMotion ||
+      filteredProjects.length <= 1 ||
+      viewMode !== 'carousel'
+    ) {
+      return;
+    }
+    const timer = setInterval(() => {
+      handleNext();
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [
+    isAutoplayActive,
+    isHovered,
+    isTabVisible,
+    prefersReducedMotion,
+    filteredProjects.length,
+    viewMode,
+    handleNext,
+  ]);
+
   // Touch swipe support for mobile / tablet
   const touchStartX = useRef<number | null>(null);
 
@@ -340,6 +432,43 @@ export function DashboardPage() {
     touchStartX.current = null;
   };
 
+  // Hover Debounce on neighboring slides (350ms deliberate threshold)
+  const handleNeighborMouseEnter = (direction: 'prev' | 'next') => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      if (direction === 'prev') {
+        handlePrev();
+      } else {
+        handleNext();
+      }
+    }, 350);
+  };
+
+  const handleNeighborMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  };
+
+  // Synchronize thumbnail strip scroll position when safeIndex updates
+  useEffect(() => {
+    const container = thumbnailStripRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector<HTMLButtonElement>(
+      `[data-thumb-index="${safeIndex}"]`
+    );
+    if (activeBtn) {
+      const btnLeft = activeBtn.offsetLeft;
+      const btnWidth = activeBtn.offsetWidth;
+      const containerWidth = container.offsetWidth;
+      container.scrollTo({
+        left: btnLeft - containerWidth / 2 + btnWidth / 2,
+        behavior: 'smooth',
+      });
+    }
+  }, [safeIndex]);
+
   const formatPlantedDate = (isoString?: string) => {
     if (!isoString) return 'Preserved';
     const d = new Date(isoString);
@@ -347,17 +476,67 @@ export function DashboardPage() {
     return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   };
 
-  // Revival recommendations: 2–3 paused/abandoned projects with revival potential
+  // Distinct Module A: Revival Recommendations (Ranked by feasibility score)
   const revivalRecommendations = useMemo(() => {
     return projects
       .filter((p) => p.status === 'paused' || p.status === 'abandoned')
+      .map((p) => {
+        const blockerCount = p.technicalBlockers?.length || 0;
+        const readinessScore = Math.min(
+          95,
+          Math.max(15, 50 + Math.round(p.progress * 0.35) - blockerCount * 12)
+        );
+        return {
+          ...p,
+          readinessScore,
+        };
+      })
+      .sort((a, b) => b.readinessScore - a.readinessScore)
       .slice(0, 3);
   }, [projects]);
 
-  // Unresolved blockers triage
-  const blockedProjects = useMemo(() => {
-    return projects
-      .filter((p) => p.technicalBlockers && p.technicalBlockers.length > 0)
+  // Distinct Module B: Unresolved Technical Roadblocks (Triaged by priority)
+  const unresolvedBlockers = useMemo(() => {
+    const list: Array<{
+      id: string;
+      projectId: string;
+      projectTitle: string;
+      blockerText: string;
+      severity: 'Critical' | 'Technical Obstacle';
+      category: string;
+    }> = [];
+
+    projects.forEach((p) => {
+      if (p.technicalBlockers && p.technicalBlockers.length > 0) {
+        p.technicalBlockers.forEach((blocker, bIdx) => {
+          const textLower = blocker.toLowerCase();
+          const isCritical =
+            textLower.includes('rate limit') ||
+            textLower.includes('auth') ||
+            textLower.includes('compliance') ||
+            textLower.includes('nat') ||
+            textLower.includes('billing') ||
+            textLower.includes('quota') ||
+            textLower.includes('api cost') ||
+            textLower.includes('stripe');
+          list.push({
+            id: `${p.id}-blocker-${bIdx}`,
+            projectId: p.id,
+            projectTitle: p.title,
+            blockerText: blocker,
+            severity: isCritical ? 'Critical' : 'Technical Obstacle',
+            category: p.category,
+          });
+        });
+      }
+    });
+
+    return list
+      .sort((a, b) => {
+        if (a.severity === 'Critical' && b.severity !== 'Critical') return -1;
+        if (b.severity === 'Critical' && a.severity !== 'Critical') return 1;
+        return 0;
+      })
       .slice(0, 3);
   }, [projects]);
 
@@ -393,10 +572,36 @@ export function DashboardPage() {
     return list.slice(0, 4);
   }, [projects]);
 
+  // Five circular slots around safeIndex: offsets [-2, -1, 0, 1, 2]
+  const circularSlots = useMemo(() => {
+    const total = filteredProjects.length;
+    if (total === 0) return [];
+    if (total === 1) return [{ offset: 0, project: filteredProjects[0] }];
+
+    const offsets = [-2, -1, 0, 1, 2];
+    return offsets.map((k) => {
+      const idx = ((safeIndex + k) % total + total) % total;
+      return {
+        offset: k,
+        project: filteredProjects[idx],
+      };
+    });
+  }, [filteredProjects, safeIndex]);
+
+  // Compute translation offset for the 5-slot track during next/prev animation
+  const baseTrackOffset =
+    filteredProjects.length > 1 ? centerOffset - 2 * stepPct : centerOffset;
+  const trackTranslation =
+    animDirection === 'next' ? -stepPct : animDirection === 'prev' ? stepPct : 0;
+
   return (
-    <div className="space-y-8 pb-16">
-      {/* ================= 1. MODEST, ELEGANT WELCOME SECTION ================= */}
-      <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-xl)] p-6 md:p-8 shadow-[var(--shadow-card)] flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-colors">
+    <div className="space-y-10 pb-16 relative overflow-hidden">
+      {/* Decorative Ambient Background Lighting */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-b from-[var(--color-brand)]/10 via-[var(--color-brand)]/3 to-transparent blur-3xl pointer-events-none rounded-full" />
+      <div className="absolute top-1/4 -right-48 w-[600px] h-[600px] bg-gradient-to-b from-[var(--color-accent)]/8 to-transparent blur-3xl pointer-events-none rounded-full" />
+
+      {/* ================= 1. WELCOME HERO SECTION ================= */}
+      <section className="relative z-10 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-subtle)] border border-[var(--color-border)] rounded-[var(--radius-xl)] p-6 md:p-8 shadow-[var(--shadow-card)] flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-colors">
         <div className="space-y-2 max-w-2xl">
           <div className="flex items-center gap-2">
             <div className="w-[30px] h-[30px] rounded-[var(--radius-sm)] bg-[var(--color-brand)] text-[var(--color-brand-contrast)] flex items-center justify-center shadow-xs shrink-0">
@@ -431,34 +636,77 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* ================= 2. CLEAN PROJECT SUMMARY METRICS ================= */}
-      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* ================= 2. RESTYLED VISUALLY DISTINCT SUMMARY METRICS ================= */}
+      <section className="relative z-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Total projects', value: totalCount, note: 'recorded concepts' },
-          { label: 'Active', value: activeCount, note: 'in development' },
-          { label: 'Paused', value: pausedCount, note: 'on hold' },
-          { label: 'Completed', value: completedCount, note: 'shipped releases' },
-          { label: 'Ready to revive', value: readyToReviveCount, note: 'high readiness' },
-        ].map((m) => (
-          <div
-            key={m.label}
-            className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 shadow-[var(--shadow-card)] transition-colors"
-          >
-            <span className="text-xs sm:text-sm text-[var(--color-text-secondary)] font-medium block mb-1">
-              {m.label}
-            </span>
-            <div className="text-2xl sm:text-3xl font-bold text-[var(--color-text)] font-display">
-              {m.value}
+          {
+            label: 'Total projects',
+            value: totalCount,
+            note: 'recorded concepts',
+            accent: 'border-indigo-500/40',
+            icon: Archive,
+            iconColor: 'text-indigo-400 bg-indigo-500/10',
+          },
+          {
+            label: 'Active',
+            value: activeCount,
+            note: 'in development',
+            accent: 'border-cyan-500/40',
+            icon: Activity,
+            iconColor: 'text-cyan-400 bg-cyan-500/10',
+          },
+          {
+            label: 'Paused',
+            value: pausedCount,
+            note: 'on hold',
+            accent: 'border-amber-500/40',
+            icon: PauseCircle,
+            iconColor: 'text-amber-400 bg-amber-500/10',
+          },
+          {
+            label: 'Completed',
+            value: completedCount,
+            note: 'shipped releases',
+            accent: 'border-emerald-500/40',
+            icon: CheckCircle2,
+            iconColor: 'text-emerald-400 bg-emerald-500/10',
+          },
+          {
+            label: 'Ready to revive',
+            value: readyToReviveCount,
+            note: 'high readiness',
+            accent: 'border-fuchsia-500/40',
+            icon: Sparkles,
+            iconColor: 'text-fuchsia-400 bg-fuchsia-500/10',
+          },
+        ].map((m) => {
+          const MIcon = m.icon;
+          return (
+            <div
+              key={m.label}
+              className={`bg-[var(--color-surface)] border border-[var(--color-border)] border-t-2 ${m.accent} rounded-[var(--radius-lg)] p-5 shadow-[var(--shadow-card)] transition-all hover:translate-y-[-1px] hover:shadow-md`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs sm:text-sm text-[var(--color-text-secondary)] font-medium block">
+                  {m.label}
+                </span>
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center ${m.iconColor}`}>
+                  <MIcon className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-[var(--color-text)] font-display tracking-tight">
+                {m.value}
+              </div>
+              <span className="text-xs text-[var(--color-text-muted)] mt-1 block font-mono">
+                {m.note}
+              </span>
             </div>
-            <span className="text-xs text-[var(--color-text-muted)] mt-1 block font-mono">
-              {m.note}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
-      {/* ================= 3. MAIN PROJECT COLLECTION & GLOSSY CAROUSEL ================= */}
-      <section className="space-y-5">
+      {/* ================= 3. MAIN PROJECT COLLECTION & CONTINUOUS CIRCULAR CAROUSEL ================= */}
+      <section className="relative z-10 space-y-5">
         {/* Controls Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-3">
@@ -541,8 +789,8 @@ export function DashboardPage() {
                     ? 'bg-[var(--color-surface)] text-[var(--color-brand)] shadow-xs'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
                 }`}
-                title="Glossy Carousel Showcase"
-                aria-label="Glossy carousel showcase"
+                title="Circular Carousel Showcase"
+                aria-label="Circular carousel showcase"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Showcase</span>
@@ -600,18 +848,23 @@ export function DashboardPage() {
             </div>
           </div>
         ) : viewMode === 'carousel' ? (
-          /* ================= GLOSSY CAROUSEL SHOWCASE ================= */
+          /* ================= CONTINUOUS CIRCULAR PROJECT CAROUSEL ================= */
           <div
             className="space-y-4"
             role="region"
             aria-roledescription="carousel"
             aria-label="Project showcase carousel"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+              setIsHovered(false);
+              handleNeighborMouseLeave();
+            }}
           >
             {/* Carousel Control Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs font-mono">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-brand)] bg-[var(--color-brand-soft)] px-2.5 py-0.5 rounded-md border border-[var(--color-border)]">
-                  Featured Gallery
+                  Rotating Exhibit
                 </span>
                 <span className="text-[var(--color-text-secondary)] font-semibold">
                   PROJECT{' '}
@@ -620,13 +873,36 @@ export function DashboardPage() {
                   </strong>{' '}
                   / {filteredProjects.length < 10 ? `0${filteredProjects.length}` : filteredProjects.length}
                 </span>
+
+                {/* Autoplay Pause / Play Toggle */}
+                {filteredProjects.length > 1 && !prefersReducedMotion && (
+                  <button
+                    onClick={() => setIsAutoplayActive((prev) => !prev)}
+                    className={`ml-2 p-1 px-2 rounded-lg border text-[11px] font-mono flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      isAutoplayActive
+                        ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand)] font-semibold'
+                        : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                    }`}
+                    title={isAutoplayActive ? 'Pause autoplay' : 'Resume autoplay'}
+                    aria-label={isAutoplayActive ? 'Pause autoplay' : 'Resume autoplay'}
+                  >
+                    {isAutoplayActive ? (
+                      <Pause className="w-3 h-3" />
+                    ) : (
+                      <Play className="w-3 h-3" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {isAutoplayActive ? 'Autoplay' : 'Paused'}
+                    </span>
+                  </button>
+                )}
               </div>
 
-              {/* Prev / Next & Indicators */}
+              {/* Prev / Next & Scrubber */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={handlePrev}
-                  disabled={filteredProjects.length <= 1 || safeIndex === 0}
+                  disabled={filteredProjects.length <= 1}
                   className="p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-xs focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]"
                   title="Previous project [← Left Arrow]"
                   aria-label="Previous project slide"
@@ -634,12 +910,17 @@ export function DashboardPage() {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                {/* Dot Scrubber */}
+                {/* Position Indicator Dots */}
                 <div className="hidden sm:flex items-center gap-1.5 px-2">
                   {filteredProjects.map((p, idx) => (
                     <button
                       key={p.id}
-                      onClick={() => setActiveIndex(idx)}
+                      onClick={() => {
+                        if (idx === safeIndex) return;
+                        if (idx === (safeIndex + 1) % filteredProjects.length) handleNext();
+                        else if (idx === (safeIndex - 1 + filteredProjects.length) % filteredProjects.length) handlePrev();
+                        else setCurrentIndex(idx);
+                      }}
                       className={`h-2 rounded-full transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] ${
                         idx === safeIndex
                           ? 'w-6 bg-[var(--color-brand)]'
@@ -653,7 +934,7 @@ export function DashboardPage() {
 
                 <button
                   onClick={handleNext}
-                  disabled={filteredProjects.length <= 1 || safeIndex === filteredProjects.length - 1}
+                  disabled={filteredProjects.length <= 1}
                   className="p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-xs focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]"
                   title="Next project [→ Right Arrow]"
                   aria-label="Next project slide"
@@ -663,7 +944,7 @@ export function DashboardPage() {
               </div>
             </div>
 
-            {/* Glossy Carousel Stage */}
+            {/* Continuous Circular Carousel Stage */}
             <div
               className="relative w-full overflow-hidden py-3 select-none"
               onTouchStart={handleTouchStart}
@@ -673,45 +954,83 @@ export function DashboardPage() {
               <div className="absolute left-0 top-0 bottom-0 w-12 z-20 pointer-events-none bg-gradient-to-r from-[var(--color-page)] to-transparent opacity-60 hidden md:block" />
               <div className="absolute right-0 top-0 bottom-0 w-12 z-20 pointer-events-none bg-gradient-to-l from-[var(--color-page)] to-transparent opacity-60 hidden md:block" />
 
-              {/* Sliding Card Track */}
+              {/* 5-Slot Virtual Track */}
               <div
                 className="flex items-center"
                 style={{
-                  transform: `translateX(calc(${sideOffset}% - ${safeIndex * (slideWidthPct + gapPct)}%))`,
-                  transition: prefersReducedMotion
-                    ? 'none'
-                    : 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)',
+                  transform: `translateX(calc(${baseTrackOffset}% + ${trackTranslation}%))`,
+                  transition:
+                    animDirection && !prefersReducedMotion
+                      ? 'transform 450ms cubic-bezier(0.16, 1, 0.3, 1)'
+                      : 'none',
                   willChange: 'transform',
                 }}
               >
-                {filteredProjects.map((project, idx) => {
-                  const isCurrent = idx === safeIndex;
+                {circularSlots.map((slot) => {
+                  const { offset, project } = slot;
+                  const isCenter = offset === 0;
+                  const isLeftPeek = offset === -1;
+                  const isRightPeek = offset === 1;
+                  const isFar = Math.abs(offset) > 1;
 
                   return (
                     <div
-                      key={project.id}
+                      key={`${project.id}-${offset}`}
                       style={{
                         width: `${slideWidthPct}%`,
                         marginRight: `${gapPct}%`,
                         flexShrink: 0,
                       }}
                       className={`transition-all ${
-                        prefersReducedMotion ? '' : 'duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]'
+                        animDirection && !prefersReducedMotion
+                          ? 'duration-450 ease-[cubic-bezier(0.16,1,0.3,1)]'
+                          : ''
                       } ${
-                        isCurrent
+                        isCenter
                           ? 'scale-100 opacity-100 z-10'
+                          : isFar
+                          ? 'opacity-0 pointer-events-none scale-75'
                           : 'scale-[0.93] opacity-45 hover:opacity-75 cursor-pointer z-0'
                       }`}
-                      onClick={() => {
-                        if (!isCurrent) setActiveIndex(idx);
+                      onMouseEnter={() => {
+                        if (isLeftPeek) handleNeighborMouseEnter('prev');
+                        else if (isRightPeek) handleNeighborMouseEnter('next');
+                        else handleNeighborMouseLeave();
                       }}
-                      title={isCurrent ? undefined : `Switch to ${project.title}`}
+                      onMouseLeave={handleNeighborMouseLeave}
+                      onClick={() => {
+                        if (isCenter) {
+                          navigate(`/projects/${project.id}`);
+                        } else if (isLeftPeek) {
+                          handlePrev();
+                        } else if (isRightPeek) {
+                          handleNext();
+                        }
+                      }}
+                      title={
+                        isCenter
+                          ? `Click to open ${project.title} case file`
+                          : `Select ${project.title}`
+                      }
+                      role={isCenter ? 'button' : undefined}
+                      tabIndex={isCenter ? 0 : -1}
+                      aria-label={
+                        isCenter
+                          ? `Open case file for ${project.title}`
+                          : `Switch to ${project.title}`
+                      }
+                      onKeyDown={(e) => {
+                        if (isCenter && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          navigate(`/projects/${project.id}`);
+                        }
+                      }}
                     >
                       {/* Glossy Card Container */}
                       <div
                         className={`relative rounded-3xl border transition-all duration-300 overflow-hidden ${
-                          isCurrent
-                            ? 'border-[#E8E2D6] dark:border-white/15 bg-gradient-to-b from-[#FFFFFF] via-[#FAF8F5] to-[#F5F2ED] dark:from-[#241B33]/95 dark:via-[#1B1428]/95 dark:to-[#130E1F]/95 shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12)] dark:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85)]'
+                          isCenter
+                            ? 'border-[#E8E2D6] dark:border-white/15 bg-gradient-to-b from-[#FFFFFF] via-[#FAF8F5] to-[#F5F2ED] dark:from-[#241B33]/95 dark:via-[#1B1428]/95 dark:to-[#130E1F]/95 shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12)] dark:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.12)] ring-1 ring-black/5 dark:ring-white/10'
                             : 'border-[#E8E2D6]/60 dark:border-white/10 bg-[#FFFDF9]/80 dark:bg-[#1C1528]/80 shadow-sm'
                         } p-6 sm:p-8 md:p-9`}
                       >
@@ -721,16 +1040,7 @@ export function DashboardPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                           {/* Left Column: Project Cover / Generative Artwork */}
                           <div className="lg:col-span-5 w-full">
-                            <ProjectArtwork
-                              project={project}
-                              onClick={() => {
-                                if (isCurrent) {
-                                  navigate(`/projects/${project.id}`);
-                                } else {
-                                  setActiveIndex(idx);
-                                }
-                              }}
-                            />
+                            <ProjectArtwork project={project} />
                           </div>
 
                           {/* Right Column: Project Narrative Dossier */}
@@ -749,7 +1059,7 @@ export function DashboardPage() {
                               </div>
 
                               {/* Bookmark Toggle */}
-                              {isCurrent && (
+                              {isCenter && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -770,13 +1080,7 @@ export function DashboardPage() {
 
                             {/* Title */}
                             <h3
-                              onClick={(e) => {
-                                if (isCurrent) {
-                                  e.stopPropagation();
-                                  navigate(`/projects/${project.id}`);
-                                }
-                              }}
-                              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#1C1917] dark:text-[#F8F7FB] hover:text-[var(--color-brand)] transition-colors cursor-pointer leading-tight"
+                              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#1C1917] dark:text-[#F8F7FB] hover:text-[var(--color-brand)] transition-colors leading-tight"
                               style={{ fontFamily: 'var(--font-display)' }}
                             >
                               {project.title}
@@ -835,22 +1139,9 @@ export function DashboardPage() {
                               </div>
                             </div>
 
-                            {/* Actions Bar */}
-                            {isCurrent && (
+                            {/* Action Bar (Direct card click opens case file; secondary controls protected) */}
+                            {isCenter && (
                               <div className="flex flex-wrap items-center gap-3 pt-2">
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/projects/${project.id}`);
-                                  }}
-                                  className="shadow-xs cursor-pointer"
-                                >
-                                  <span>Open Project Details</span>
-                                  <ArrowRight className="w-4 h-4" />
-                                </Button>
-
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -876,6 +1167,11 @@ export function DashboardPage() {
                                   <Edit2 className="w-3.5 h-3.5" />
                                   <span className="hidden sm:inline">Edit</span>
                                 </button>
+
+                                <div className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-brand)] font-mono group-hover:translate-x-0.5 transition-transform">
+                                  <span>Open Case File</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </div>
                               </div>
                             )}
                           </div>
@@ -887,12 +1183,15 @@ export function DashboardPage() {
               </div>
             </div>
 
-            {/* Quick-Jump Horizontal Strip */}
+            {/* Compact Project Thumbnail Navigation Strip */}
             {filteredProjects.length > 1 && (
               <div className="pt-2">
-                <div className="flex items-center gap-2 overflow-x-auto py-2 px-1 scrollbar-none">
+                <div
+                  ref={thumbnailStripRef}
+                  className="flex items-center gap-2.5 overflow-x-auto py-2.5 px-1 scrollbar-none scroll-smooth"
+                >
                   <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-[var(--color-text-muted)] shrink-0 pr-1 flex items-center gap-1">
-                    Jump to:
+                    Index:
                   </span>
                   {filteredProjects.map((p, idx) => {
                     const isCurrent = idx === safeIndex;
@@ -901,19 +1200,29 @@ export function DashboardPage() {
                     return (
                       <button
                         key={p.id}
-                        onClick={() => setActiveIndex(idx)}
+                        data-thumb-index={idx}
+                        onClick={() => {
+                          if (idx === safeIndex) return;
+                          if (idx === (safeIndex + 1) % filteredProjects.length) handleNext();
+                          else if (idx === (safeIndex - 1 + filteredProjects.length) % filteredProjects.length) handlePrev();
+                          else setCurrentIndex(idx);
+                        }}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono transition-all shrink-0 cursor-pointer ${
                           isCurrent
-                            ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-text)] font-bold shadow-xs'
+                            ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-text)] font-bold shadow-xs ring-1 ring-[var(--color-brand)]/30'
                             : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border-strong)]'
                         }`}
                         title={`Jump to ${p.title}`}
                       >
-                        <PIcon className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                        <span className="truncate max-w-[130px]">{p.title}</span>
+                        <div className="w-4 h-4 rounded-md bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                          <PIcon className="w-2.5 h-2.5 opacity-80" />
+                        </div>
+                        <span className="truncate max-w-[120px]">{p.title}</span>
                         <span
                           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            isCurrent ? 'bg-[var(--color-brand)]' : 'bg-[var(--color-border-strong)]'
+                            isCurrent
+                              ? 'bg-[var(--color-brand)] shadow-[0_0_8px_var(--color-brand)]'
+                              : 'bg-[var(--color-border-strong)]'
                           }`}
                         />
                       </button>
@@ -981,7 +1290,7 @@ export function DashboardPage() {
                       {project.milestones.length} milestone{project.milestones.length === 1 ? '' : 's'}
                     </span>
                     <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-brand)] group-hover:translate-x-0.5 transition-transform text-xs">
-                      Open project <ArrowRight className="w-3.5 h-3.5" />
+                      Open case file <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>
@@ -1027,53 +1336,81 @@ export function DashboardPage() {
         )}
       </section>
 
-      {/* ================= 4. SECONDARY REGION BELOW PROJECT COLLECTION ================= */}
-      <section className="pt-4 space-y-6">
+      {/* ================= 4. DISTINCT SECONDARY MODULES ================= */}
+      <section className="relative z-10 pt-4 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Section A: Revival Recommendations with Warm Accent highlights */}
-          <div className="card flex flex-col justify-between">
-            <div className="space-y-3">
+          {/* Module A: Revival Candidates (Distinct Feasibility & Restart Strategy) */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] border-t-2 border-t-fuchsia-500/60 rounded-[var(--radius-xl)] p-5 md:p-6 shadow-[var(--shadow-card)] flex flex-col justify-between">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-                  <h3
-                    className="text-base font-bold text-[var(--color-text)] tracking-tight"
-                    style={{ fontFamily: 'var(--font-display)' }}
-                  >
-                    Revival recommendations
-                  </h3>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 text-fuchsia-400 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3
+                      className="text-base font-bold text-[var(--color-text)] tracking-tight"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                      Revival Candidates
+                    </h3>
+                    <p className="text-[11px] text-[var(--color-text-secondary)]">
+                      Paused concepts with strong restart feasibility and assets.
+                    </p>
+                  </div>
                 </div>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
-                  Ready to revive
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20">
+                  Ready to Revive
                 </span>
               </div>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                Paused projects showing strong revival readiness and clear next steps.
-              </p>
 
-              <div className="space-y-2.5 pt-1">
+              <div className="space-y-3 pt-1">
                 {revivalRecommendations.length === 0 ? (
-                  <p className="text-xs text-[var(--color-text-muted)] py-3 italic">
-                    No paused projects currently eligible for revival.
-                  </p>
+                  <div className="p-6 text-center border border-dashed border-[var(--color-border)] rounded-xl space-y-1">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto" />
+                    <p className="text-xs font-semibold text-[var(--color-text)]">
+                      All active concepts in motion
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">
+                      No paused projects currently eligible for revival.
+                    </p>
+                  </div>
                 ) : (
                   revivalRecommendations.map((p) => (
                     <div
                       key={p.id}
-                      onClick={() => navigate(`/projects/${p.id}`)}
-                      className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-accent)]/50 transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                      className="p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-fuchsia-500/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                     >
-                      <div className="min-w-0">
-                        <span className="font-semibold text-xs text-[var(--color-text)] block truncate group-hover:text-[var(--color-accent)] transition-colors">
-                          {p.title}
-                        </span>
-                        <span className="text-xs text-[var(--color-text-secondary)] line-clamp-1">
-                          {p.summary}
-                        </span>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            onClick={() => navigate(`/projects/${p.id}`)}
+                            className="font-bold text-xs text-[var(--color-text)] hover:text-fuchsia-400 transition-colors cursor-pointer truncate"
+                          >
+                            {p.title}
+                          </span>
+                          <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/25">
+                            {p.readinessScore}% Feasibility
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-1 italic">
+                          {p.whyStopped
+                            ? `"${p.whyStopped}"`
+                            : `${p.progress}% completed • ${p.milestones.length} milestones reached`}
+                        </p>
                       </div>
-                      <span className="shrink-0 text-xs font-semibold text-[var(--color-accent)] flex items-center gap-1">
-                        Revive <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
+
+                      <div className="shrink-0 flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate(`/revival-studio?project=${p.id}`)}
+                          className="text-xs cursor-pointer border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/10"
+                        >
+                          <Sparkles className="w-3 h-3 text-fuchsia-400" />
+                          <span>Revive in Studio</span>
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -1081,60 +1418,84 @@ export function DashboardPage() {
             </div>
 
             <div className="pt-4 mt-4 border-t border-[var(--color-border)] flex items-center justify-between">
-              <span className="text-xs text-[var(--color-text-muted)]">Need diagnostic guidance?</span>
+              <span className="text-xs text-[var(--color-text-muted)]">AI diagnostic studio</span>
               <button
                 onClick={() => navigate('/revival-studio')}
-                className="text-xs font-semibold text-[var(--color-accent)] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-fuchsia-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 Open Revival Studio <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Section B: Unresolved Blockers */}
-          <div className="card flex flex-col justify-between">
-            <div className="space-y-3">
+          {/* Module B: Unresolved Technical Roadblocks (Triaged Issue Tracker) */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] border-t-2 border-t-amber-500/60 rounded-[var(--radius-xl)] p-5 md:p-6 shadow-[var(--shadow-card)] flex flex-col justify-between">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-[var(--color-warning)]" />
-                  <h3
-                    className="text-base font-bold text-[var(--color-text)] tracking-tight"
-                    style={{ fontFamily: 'var(--font-display)' }}
-                  >
-                    Unresolved blockers
-                  </h3>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3
+                      className="text-base font-bold text-[var(--color-text)] tracking-tight"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                      Unresolved Technical Roadblocks
+                    </h3>
+                    <p className="text-[11px] text-[var(--color-text-secondary)]">
+                      Specific blockers recorded in past development sprints.
+                    </p>
+                  </div>
                 </div>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)]">
-                  {blockedProjects.length} logged
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  {unresolvedBlockers.length} Logged
                 </span>
               </div>
-              <p className="text-xs text-[var(--color-text-secondary)]">
-                Technical roadblocks preventing forward momentum across projects.
-              </p>
 
-              <div className="space-y-2.5 pt-1">
-                {blockedProjects.length === 0 ? (
-                  <p className="text-xs text-[var(--color-text-muted)] py-3 italic">
-                    Zero technical blockers currently recorded.
-                  </p>
+              <div className="space-y-3 pt-1">
+                {unresolvedBlockers.length === 0 ? (
+                  <div className="p-6 text-center border border-dashed border-[var(--color-border)] rounded-xl space-y-1">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto" />
+                    <p className="text-xs font-semibold text-[var(--color-text)]">
+                      Zero technical blockers recorded
+                    </p>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">
+                      Development pipelines across all projects are clear.
+                    </p>
+                  </div>
                 ) : (
-                  blockedProjects.map((p) => (
+                  unresolvedBlockers.map((blocker, bIdx) => (
                     <div
-                      key={p.id}
-                      onClick={() => navigate(`/projects/${p.id}`)}
-                      className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-border-strong)] transition-colors cursor-pointer"
+                      key={blocker.id}
+                      className="p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-amber-500/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-xs text-[var(--color-text)] block truncate">
-                          {p.title}
-                        </span>
-                        <span className="text-[11px] text-[var(--color-warning)] font-medium">
-                          Blocker
-                        </span>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.2 rounded border border-amber-500/25">
+                            ROADBLOCK #{bIdx + 1 < 10 ? `0${bIdx + 1}` : bIdx + 1}
+                          </span>
+                          <span
+                            onClick={() => navigate(`/projects/${blocker.projectId}`)}
+                            className="font-bold text-xs text-[var(--color-text)] hover:text-amber-400 transition-colors cursor-pointer truncate"
+                          >
+                            {blocker.projectTitle}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1">
+                          {blocker.blockerText}
+                        </p>
                       </div>
-                      <span className="text-xs text-[var(--color-text-secondary)] line-clamp-1 mt-0.5 block">
-                        {p.technicalBlockers[0]}
-                      </span>
+
+                      <div className="shrink-0 flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/projects/${blocker.projectId}`)}
+                          className="text-xs font-semibold text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Inspect</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -1142,7 +1503,7 @@ export function DashboardPage() {
             </div>
 
             <div className="pt-4 mt-4 border-t border-[var(--color-border)] flex items-center justify-between">
-              <span className="text-xs text-[var(--color-text-muted)]">Resolve roadblocks</span>
+              <span className="text-xs text-[var(--color-text-muted)]">Resolve obstacles</span>
               <button
                 onClick={() => navigate('/projects')}
                 className="text-xs font-semibold text-[var(--color-brand)] hover:underline flex items-center gap-1 cursor-pointer"
@@ -1151,7 +1512,10 @@ export function DashboardPage() {
               </button>
             </div>
           </div>
+        </div>
 
+        {/* Secondary Modules: Recent Activity & AI Tools */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Section C: Recent Activity Feed */}
           <div className="card flex flex-col justify-between">
             <div className="space-y-3">

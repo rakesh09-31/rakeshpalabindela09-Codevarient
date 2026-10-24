@@ -101,6 +101,7 @@ for (const target of targets) {
     await execFileAsync(EDGE_PATH, [
       '--headless',
       '--disable-gpu',
+      '--no-sandbox',
       `--window-size=${target.size || '1440,900'}`,
       '--hide-scrollbars',
       '--inprivate',
