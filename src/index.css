@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ivory: #FDFBF7;
+  --color-ivory-warm: #F8F5EE;
+  --color-ivory-dark: #F0EAE1;
+  --color-mint: #10B981;
+  --color-mint-light: #A7F3D0;
+  --color-mint-pale: #ECFDF5;
+  --color-forest: #14382B;
+  --color-forest-light: #1E503E;
+  --color-forest-dark: #0D261D;
+  --color-teal-accent: #0F766E;
+  --color-teal-pale: #F0FDFA;
+  --color-lavender: #8B5CF6;
+  --color-lavender-pale: #F5F3FF;
+  --color-paleblue: #0284C7;
+  --color-paleblue-pale: #F0F9FF;
+  --color-amber-accent: #D97706;
+  --color-amber-pale: #FFFBEB;
+  --color-charcoal: #1F2937;
+  --color-charcoal-muted: #4B5563;
+  --color-gray-green: #8FA499;
+  --color-gray-green-light: #E2E8E4;
+  --color-gray-green-border: #E5EBE6;
+  --color-rose-accent: #E11D48;
+  --color-rose-pale: #FFF1F2;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+}
+
+@layer base {
+  body {
+    background-color: #FDFBF7;
+    color: #1F2937;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Subtle botanical textured background pattern */
+.bg-garden-pattern {
+  background-color: #FDFBF7;
+  background-image: radial-gradient(#10B981 0.75px, transparent 0.75px), radial-gradient(#14382B 0.75px, #FDFBF7 0.75px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+  background-opacity: 0.04;
+}
+
+/* Animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes leaf-sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.animate-sway {
+  animation: leaf-sway 4s ease-in-out infinite;
+}
