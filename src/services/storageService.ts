@@ -10,6 +10,7 @@ import {
   Notification,
   UserProfile,
   FusionProposal,
+  UserSocialProfile,
 } from '../types';
 import {
   INITIAL_PROJECTS,
@@ -17,6 +18,7 @@ import {
   INITIAL_REMINDERS,
   INITIAL_NOTIFICATIONS,
   INITIAL_USER_PROFILE,
+  INITIAL_COMMUNITY_USERS,
 } from '../data/seedData';
 
 const KEYS = {
@@ -25,6 +27,9 @@ const KEYS = {
   REMINDERS: 'graveyard_reminders_v2',
   NOTIFICATIONS: 'graveyard_notifications_v2',
   USER_PROFILE: 'graveyard_user_profile_v2',
+  COMMUNITY_USERS: 'graveyard_community_users_v2',
+  FOLLOWS: 'graveyard_follows_v2',
+  COLLABORATIONS: 'graveyard_collaborations_v2',
   FUSIONS: 'graveyard_fusions_v2',
   INITIALIZED: 'graveyard_initialized_v2',
 };
@@ -920,6 +925,50 @@ export const storageService = {
     const updated = { ...current, ...updates };
     this.saveUserProfile(updated);
     return updated;
+  },
+
+  getCommunityUsers(): UserProfile[] {
+    try {
+      const data = localStorage.getItem(KEYS.COMMUNITY_USERS);
+      if (!data) {
+        localStorage.setItem(KEYS.COMMUNITY_USERS, JSON.stringify(INITIAL_COMMUNITY_USERS));
+        return INITIAL_COMMUNITY_USERS;
+      }
+      return JSON.parse(data);
+    } catch {
+      return INITIAL_COMMUNITY_USERS;
+    }
+  },
+
+  getUserSocialProfile(id: string, currentUserId: string = 'user-1'): UserSocialProfile | null {
+    const users = this.getCommunityUsers();
+    const user = users.find((u) => u.id === id) || (id === 'user-1' ? this.getUserProfile() : null);
+    if (!user) return null;
+
+    const allProjects = this.getProjects();
+    const userProjects = allProjects.filter((p) => p.ownerId === id || (p.teamMembers && p.teamMembers.some((m) => m.id === id)));
+    const projectsCount = userProjects.length;
+    const completedCount = userProjects.filter((p) => p.status === 'completed').length;
+    const revivedCount = userProjects.filter((p) => p.status === 'revived').length;
+    const successRate = projectsCount > 0 ? Math.round(((completedCount + revivedCount) / projectsCount) * 100) : 0;
+
+    let followStatus: 'none' | 'following' | 'requested' | 'incoming_request' = 'none';
+    if (id !== currentUserId) {
+      if (id === 'user-2') followStatus = 'following';
+      else if (id === 'user-3') followStatus = 'requested';
+    }
+
+    return {
+      ...user,
+      username: user.username || user.name.toLowerCase().replace(/\s+/g, ''),
+      projectsCount,
+      completedCount,
+      revivedCount,
+      successRate,
+      followersCount: id === 'user-1' ? 2 : 1,
+      followingCount: id === 'user-1' ? 1 : 1,
+      followStatus,
+    };
   },
 
   resetAllData(): void {

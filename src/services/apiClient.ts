@@ -2,8 +2,15 @@ import {
   Project,
   Team,
   Reminder,
+  ReminderMetrics,
+  ReminderEvent,
+  ReminderSuggestion,
+  ProviderConfigStatus,
   AIChatMessage,
   FusionProposal,
+  UserProfile,
+  UserSocialProfile,
+  CollaborationRequest,
 } from '../types/index.ts';
 
 const BASE_URL = '/api';
@@ -111,11 +118,23 @@ export class ApiClient {
   async askAiAssistant(
     projectId: string,
     prompt: string,
-    mode?: 'blocker' | 'mvp' | 'tech-alt' | 'idea' | 'roadmap' | 'path' | 'chat'
+    mode?: string,
+    chatHistory?: Array<{ role: string; content: string }>
   ): Promise<AIChatMessage> {
     return this.request<AIChatMessage>('/ai/assistant', {
       method: 'POST',
-      body: JSON.stringify({ projectId, prompt, mode }),
+      body: JSON.stringify({ projectId, prompt, mode, chatHistory }),
+    });
+  }
+
+  async askAiFusionAdvisor(
+    prompt: string,
+    selectedProjectIds?: string[],
+    chatHistory?: Array<{ role: string; content: string }>
+  ): Promise<AIChatMessage> {
+    return this.request<AIChatMessage>('/ai/fusion/advisor', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, selectedProjectIds, chatHistory }),
     });
   }
 
@@ -124,6 +143,15 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ projectIds }),
     });
+  }
+
+  async getFusionProposal(
+    fusionId: string
+  ): Promise<{ proposal: FusionProposal; sourceProjects: Project[] }> {
+    return this.request<{ proposal: FusionProposal; sourceProjects: Project[] }>(
+      `/ai/fusion/${fusionId}`,
+      { method: 'GET' }
+    );
   }
 
   async approveFusion(
@@ -163,6 +191,18 @@ export class ApiClient {
     return this.request<Reminder[]>('/reminders');
   }
 
+  async getReminderMetrics(): Promise<ReminderMetrics> {
+    return this.request<ReminderMetrics>('/reminders/metrics');
+  }
+
+  async getReminderHistory(): Promise<ReminderEvent[]> {
+    return this.request<ReminderEvent[]>('/reminders/history');
+  }
+
+  async getReminderProviderStatus(): Promise<ProviderConfigStatus> {
+    return this.request<ProviderConfigStatus>('/reminders/provider-status');
+  }
+
   async createReminder(data: Omit<Reminder, 'id' | 'createdAt' | 'status'>): Promise<Reminder> {
     return this.request<Reminder>('/reminders', {
       method: 'POST',
@@ -177,9 +217,108 @@ export class ApiClient {
     });
   }
 
+  async completeReminder(id: string): Promise<{ success: boolean; nextReminder?: Reminder }> {
+    return this.request<{ success: boolean; nextReminder?: Reminder }>(`/reminders/${id}/complete`, {
+      method: 'POST',
+    });
+  }
+
+  async dismissReminder(id: string): Promise<Reminder> {
+    return this.request<Reminder>(`/reminders/${id}/dismiss`, {
+      method: 'POST',
+    });
+  }
+
+  async snoozeReminder(
+    id: string,
+    options: { hours?: number; minutes?: number; customDateTime?: string }
+  ): Promise<Reminder> {
+    return this.request<Reminder>(`/reminders/${id}/snooze`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  }
+
   async deleteReminder(id: string): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/reminders/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async getAiReminderSuggestions(): Promise<ReminderSuggestion[]> {
+    return this.request<ReminderSuggestion[]>('/ai/reminders/suggestions', {
+      method: 'POST',
+    });
+  }
+
+  // ---------------- USERS & SOCIAL ----------------
+  async getUsers(): Promise<UserSocialProfile[]> {
+    return this.request<UserSocialProfile[]>('/users');
+  }
+
+  async getUser(id: string): Promise<UserSocialProfile> {
+    return this.request<UserSocialProfile>(`/users/${id}`);
+  }
+
+  async updateUser(id: string, updates: Partial<UserProfile>): Promise<UserSocialProfile> {
+    return this.request<UserSocialProfile>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async getUserFollowers(id: string): Promise<{ user: UserProfile; status: 'following' | 'requested' }[]> {
+    return this.request<{ user: UserProfile; status: 'following' | 'requested' }[]>(`/users/${id}/followers`);
+  }
+
+  async getUserFollowing(id: string): Promise<{ user: UserProfile; status: 'following' | 'requested' }[]> {
+    return this.request<{ user: UserProfile; status: 'following' | 'requested' }[]>(`/users/${id}/following`);
+  }
+
+  async followUser(targetId: string, requiresRequest?: boolean): Promise<{ success: boolean; status: string }> {
+    return this.request<{ success: boolean; status: string }>(`/users/${targetId}/follow`, {
+      method: 'POST',
+      body: JSON.stringify({ requiresRequest }),
+    });
+  }
+
+  async unfollowUser(targetId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/users/${targetId}/follow`, {
+      method: 'DELETE',
+    });
+  }
+
+  async respondFollowRequest(followerId: string, action: 'accept' | 'decline'): Promise<{ success: boolean; action: string }> {
+    return this.request<{ success: boolean; action: string }>(`/users/${followerId}/follow/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  // ---------------- COLLABORATIONS ----------------
+  async getCollaborationRequests(projectId?: string): Promise<CollaborationRequest[]> {
+    const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : '';
+    return this.request<CollaborationRequest[]>(`/collaborations${query}`);
+  }
+
+  async createCollaborationRequest(data: {
+    projectId: string;
+    skills: string;
+    message: string;
+  }): Promise<CollaborationRequest> {
+    return this.request<CollaborationRequest>('/collaborations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async respondCollaborationRequest(
+    requestId: string,
+    action: 'accept' | 'decline'
+  ): Promise<CollaborationRequest> {
+    return this.request<CollaborationRequest>(`/collaborations/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
     });
   }
 }

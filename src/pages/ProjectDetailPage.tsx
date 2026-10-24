@@ -33,6 +33,7 @@ import {
   XCircle,
   Target,
   RefreshCw,
+  GripVertical,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { apiClient } from '../services/apiClient';
@@ -138,10 +139,12 @@ export function ProjectDetailPage() {
 
   // Modals
   const [showStatusModal, setShowStatusModal] = useState(() => searchParams.get('statusModal') === 'true');
-  const [selectedNewStatus, setSelectedNewStatus] = useState<ProjectStatus>(() => project?.status || 'paused');
   const [statusNote, setStatusNote] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [isStatusTokenPickedUp, setIsStatusTokenPickedUp] = useState(false);
+  const [isStatusTokenDragging, setIsStatusTokenDragging] = useState(false);
+  const [stagedConsequentialStatus, setStagedConsequentialStatus] = useState<ProjectStatus | null>(null);
 
   const [showRevivalModal, setShowRevivalModal] = useState(false);
   const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
@@ -236,25 +239,36 @@ export function ProjectDetailPage() {
   };
 
   // Status Change handlers
-  const handleOpenStatusModal = (initialStatus?: ProjectStatus) => {
-    setSelectedNewStatus(initialStatus || project.status);
+  const handleOpenStatusModal = (_targetStatus?: ProjectStatus) => {
     setStatusNote('');
     setStatusError(null);
+    setStagedConsequentialStatus(null);
+    setIsStatusTokenPickedUp(false);
+    setIsStatusTokenDragging(false);
     setShowStatusModal(true);
   };
 
-  const handleStatusChangeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedNewStatus === project.status && !statusNote.trim()) {
-      setShowStatusModal(false);
+  const executeStatusDrop = (targetStatus: ProjectStatus) => {
+    if (targetStatus === project.status) {
+      setStatusError(`Project is already in "${project.status}" status.`);
       return;
     }
+
+    if (targetStatus === 'abandoned' || targetStatus === 'archived') {
+      // Stage for consequential confirmation
+      setStagedConsequentialStatus(targetStatus);
+      setStatusError(null);
+      return;
+    }
+
     setIsUpdatingStatus(true);
     setStatusError(null);
     try {
-      changeProjectStatus(project.id, selectedNewStatus, statusNote.trim() || undefined);
+      changeProjectStatus(project.id, targetStatus, statusNote.trim() || undefined);
       setShowStatusModal(false);
       setStatusNote('');
+      setIsStatusTokenPickedUp(false);
+      setIsStatusTokenDragging(false);
     } catch (err: any) {
       setStatusError(err.message || 'Failed to update project status.');
     } finally {
@@ -262,11 +276,21 @@ export function ProjectDetailPage() {
     }
   };
 
-  const handleDirectStatusChange = (newStatus: ProjectStatus, note: string) => {
+  const confirmConsequentialStatusDrop = () => {
+    if (!stagedConsequentialStatus) return;
+    setIsUpdatingStatus(true);
+    setStatusError(null);
     try {
-      changeProjectStatus(project.id, newStatus, note);
+      changeProjectStatus(project.id, stagedConsequentialStatus, statusNote.trim() || undefined);
+      setShowStatusModal(false);
+      setStatusNote('');
+      setStagedConsequentialStatus(null);
+      setIsStatusTokenPickedUp(false);
+      setIsStatusTokenDragging(false);
     } catch (err: any) {
-      console.error('Failed to change status:', err);
+      setStatusError(err.message || 'Failed to update project status.');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -683,11 +707,11 @@ export function ProjectDetailPage() {
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0 md:self-center">
             <button
-              onClick={() => handleDirectStatusChange('active', 'Resumed active sprint from paused state')}
+              onClick={() => handleOpenStatusModal('active')}
               className="px-3.5 py-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-strong)] text-xs font-semibold text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Play className="w-3.5 h-3.5 text-[var(--color-status-active)]" />
-              <span>Resume Development</span>
+              <span>Resume Development...</span>
             </button>
 
             <button
@@ -1893,43 +1917,117 @@ ${project.summary}
         )}
       </div>
 
-      {/* ================= FUNCTIONAL PROJECT STATUS CHANGER MODAL ================= */}
+      {/* ================= THE CANVAS PROTOCOL: PROJECT STATUS CHANGER MODAL ================= */}
       <Modal
         isOpen={showStatusModal}
         onClose={() => setShowStatusModal(false)}
-        title="Change Project Lifecycle Status"
+        title="Project Lifecycle Status Canvas"
         size="lg"
       >
-        <form onSubmit={handleStatusChangeSubmit} className="space-y-5">
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)]">
-            <span className="text-xs text-[var(--color-text-secondary)]">Current Project Status:</span>
-            <Badge status={project.status} size="md" />
+        <div className="space-y-5 select-none">
+          {/* Draggable Status Token Card */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-purple-900/20 to-black/30 border border-purple-500/40 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', project.status);
+                e.dataTransfer.effectAllowed = 'copyMove';
+                setIsStatusTokenDragging(true);
+              }}
+              onDragEnd={() => setIsStatusTokenDragging(false)}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  setIsStatusTokenPickedUp((prev) => !prev);
+                }
+              }}
+              role="button"
+              aria-label={`Draggable Status Change Token for ${project.title}. Current status: ${project.status}. Press Space or Enter to pick up.`}
+              className={`p-3 rounded-xl border flex items-center gap-3 transition-all cursor-grab active:cursor-grabbing ${
+                isStatusTokenPickedUp
+                  ? 'bg-purple-600 text-white border-purple-400 ring-2 ring-purple-400/50 shadow-md scale-[1.02]'
+                  : isStatusTokenDragging
+                  ? 'opacity-40 border-dashed border-purple-400 bg-purple-950/30'
+                  : 'bg-[var(--color-surface)] dark:bg-[#1D1726] border-[var(--color-border)] dark:border-[#382B49] hover:border-purple-500/50'
+              }`}
+            >
+              <GripVertical className="w-4 h-4 text-purple-400 shrink-0" />
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-text-muted)] block">
+                  Status Change Token
+                </span>
+                <span className="text-xs font-bold text-[var(--color-text)]">
+                  {project.title}
+                </span>
+              </div>
+              <Badge status={project.status} size="sm" />
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <span className="text-[11px] font-mono text-[var(--color-text-secondary)]">
+                {isStatusTokenPickedUp ? 'Token Picked Up • Select a Zone Below' : 'Drag Token into Target Status Zone'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsStatusTokenPickedUp((prev) => !prev)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  isStatusTokenPickedUp ? 'bg-purple-600 text-white' : 'bg-white/10 hover:bg-white/20 text-[var(--color-text)]'
+                }`}
+              >
+                {isStatusTokenPickedUp ? 'Holding Token' : 'Pick Up (Space)'}
+              </button>
+            </div>
           </div>
 
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Choose a valid lifecycle status. This updates project dates, dashboards, and timeline without modifying tasks, blockers, or milestone progress:
+            Primary status changes are performed <strong>by dragging the Status Token into a destination zone</strong> below.
           </p>
 
+          {/* Destination Status Zones */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {STATUS_OPTIONS.map((opt) => {
               const Icon = opt.icon;
-              const isSelected = selectedNewStatus === opt.status;
+              const isCurrent = project.status === opt.status;
+              const isStaged = stagedConsequentialStatus === opt.status;
 
               return (
                 <div
                   key={opt.status}
-                  onClick={() => setSelectedNewStatus(opt.status)}
-                  className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer select-none ${
-                    isSelected
-                      ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] shadow-xs'
+                  data-drop-zone={opt.status}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsStatusTokenDragging(false);
+                    executeStatusDrop(opt.status);
+                  }}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      executeStatusDrop(opt.status);
+                    }
+                  }}
+                  role="region"
+                  aria-label={`Status Zone: ${opt.label}. Drop Status Token here to apply.`}
+                  className={`p-3.5 rounded-2xl border-2 transition-all select-none ${
+                    isCurrent
+                      ? 'border-[var(--color-border)] bg-[var(--color-surface-subtle)] opacity-60'
+                      : isStaged
+                      ? 'border-amber-500 bg-amber-950/20 ring-2 ring-amber-500/40 shadow-md'
+                      : isStatusTokenDragging || isStatusTokenPickedUp
+                      ? 'border-dashed border-purple-500 bg-purple-950/20 hover:border-purple-400 hover:bg-purple-900/30'
                       : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Icon className={`w-4 h-4 ${isSelected ? 'text-[var(--color-brand)]' : 'text-[var(--color-text-muted)]'}`} />
+                      <Icon className="w-4 h-4 text-purple-400" />
                       <span className="text-xs sm:text-sm font-bold text-[var(--color-text)]">
-                        {opt.label}
+                        {opt.label} Zone
                       </span>
                     </div>
                     <Badge status={opt.status} size="sm" />
@@ -1937,19 +2035,75 @@ ${project.summary}
                   <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
                     {opt.description}
                   </p>
+
+                  {/* Drop Trigger for keyboard / touch */}
+                  {!isCurrent && (isStatusTokenPickedUp || isStaged) && (
+                    <div className="mt-2.5 pt-2 border-t border-[var(--color-border)] flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => executeStatusDrop(opt.status)}
+                        className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <span>Drop Into {opt.label}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* Consequential Warning */}
-          {(selectedNewStatus === 'abandoned' || selectedNewStatus === 'archived') && (
-            <div className="p-3.5 rounded-2xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] flex items-start gap-2.5 text-xs text-[var(--color-text-body)]">
-              <AlertTriangle className="w-4 h-4 text-[var(--color-status-paused)] shrink-0 mt-0.5" />
-              <span>
-                <strong>Consequential Change:</strong> Marking this project as{' '}
-                <strong className="capitalize">{selectedNewStatus}</strong> will remove it from active sprint lists. All data and retrospects remain intact, and you can reactivate it at any time.
-              </span>
+          {/* Staged Consequential Warning & Confirmation Drop Station */}
+          {stagedConsequentialStatus && (
+            <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/50 space-y-3">
+              <div className="flex items-start gap-2.5 text-xs text-[var(--color-text-body)]">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-amber-200 block text-sm font-bold">
+                    Consequential Transition Staged: {stagedConsequentialStatus.toUpperCase()}
+                  </strong>
+                  <span className="text-xs text-amber-100/90 leading-relaxed block mt-1">
+                    Transitioning <strong>"{project.title}"</strong> to <strong className="capitalize">{stagedConsequentialStatus}</strong> will remove it from active development lists. Historical milestones and blocker logs remain preserved in archive cold storage.
+                  </span>
+                </div>
+              </div>
+
+              {/* Confirm Drop Target */}
+              <div
+                data-drop-zone="confirm-status-transition"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  confirmConsequentialStatusDrop();
+                }}
+                className="p-3.5 rounded-xl border-2 border-dashed border-amber-500/60 bg-amber-900/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+              >
+                <span className="text-amber-200 font-mono">
+                  Drop Status Token here or click confirm:
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={confirmConsequentialStatusDrop}
+                    disabled={isUpdatingStatus}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+                  >
+                    <span>Confirm Status Transition</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStagedConsequentialStatus(null)}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/40 hover:bg-black/60 text-white text-xs transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1979,18 +2133,10 @@ ${project.summary}
               disabled={isUpdatingStatus}
               onClick={() => setShowStatusModal(false)}
             >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={isUpdatingStatus}
-            >
-              {isUpdatingStatus ? 'Saving...' : 'Apply Status Change'}
+              Close
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* ================= 5 REVIVAL PATHS SELECTOR MODAL ================= */}

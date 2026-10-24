@@ -6,6 +6,8 @@ import {
   Notification,
   FusionProposal,
   UserProfile,
+  UserSocialProfile,
+  CollaborationRequest,
   ProjectStatus,
   Milestone,
   Task,
@@ -20,9 +22,20 @@ interface AppContextType {
   notifications: Notification[];
   fusionProposals: FusionProposal[];
   userProfile: UserProfile;
+  users: UserSocialProfile[];
+  collaborationRequests: CollaborationRequest[];
   sidebarCollapsed: boolean;
   mobileDrawerOpen: boolean;
   theme: 'light' | 'dark';
+
+  // Social & Community
+  refreshUsers: () => Promise<void>;
+  getUserProfileById: (id: string) => Promise<UserSocialProfile | null>;
+  followUser: (targetId: string, requiresRequest?: boolean) => Promise<void>;
+  unfollowUser: (targetId: string) => Promise<void>;
+  respondFollowRequest: (followerId: string, action: 'accept' | 'decline') => Promise<void>;
+  sendCollaborationRequest: (projectId: string, skills: string, message: string) => Promise<CollaborationRequest>;
+  respondCollaborationRequest: (requestId: string, action: 'accept' | 'decline') => Promise<CollaborationRequest>;
 
   // Projects
   createProject: (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'progress'>) => Project;
@@ -52,11 +65,13 @@ interface AppContextType {
 
   // Reminders
   createReminder: (data: Omit<Reminder, 'id' | 'createdAt' | 'status'>) => Reminder;
+  updateReminder: (id: string, updates: Partial<Reminder>) => void;
   cancelReminder: (id: string) => Reminder;
   completeReminder: (id: string) => Reminder;
-  snoozeReminder: (id: string, hours?: number) => Reminder;
+  snoozeReminder: (id: string, hours?: number, minutes?: number, customDateTime?: string) => Reminder;
   restoreReminder: (id: string) => Reminder;
   deleteReminder: (id: string) => void;
+  refreshReminders: () => void;
 
   // Notifications
   markNotificationRead: (id: string) => void;
@@ -128,6 +143,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return {} as UserProfile;
     }
   });
+  const [users, setUsers] = useState<UserSocialProfile[]>([]);
+  const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [initialized, setInitialized] = useState(true);
@@ -184,10 +201,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Asynchronously synchronize with SQLite server database
       setIsSyncing(true);
       try {
-        const [serverProjects, serverTeams, serverReminders] = await Promise.allSettled([
+        const [serverProjects, serverTeams, serverReminders, serverUsers, serverCollabs] = await Promise.allSettled([
           apiClient.getProjects(),
           apiClient.getTeams(),
           apiClient.getReminders(),
+          apiClient.getUsers(),
+          apiClient.getCollaborationRequests(),
         ]);
 
         if (serverProjects.status === 'fulfilled' && serverProjects.value && serverProjects.value.length > 0) {
@@ -201,6 +220,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (serverReminders.status === 'fulfilled' && serverReminders.value && serverReminders.value.length > 0) {
           setReminders(serverReminders.value);
           storageService.saveReminders(serverReminders.value);
+        }
+        if (serverUsers.status === 'fulfilled' && serverUsers.value && serverUsers.value.length > 0) {
+          setUsers(serverUsers.value);
+        }
+        if (serverCollabs.status === 'fulfilled' && serverCollabs.value) {
+          setCollaborationRequests(serverCollabs.value);
         }
       } catch (syncErr) {
         console.warn('Backend sync warning (local storage active):', syncErr);
@@ -368,43 +393,115 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (data: Omit<Reminder, 'id' | 'createdAt' | 'status'>) => {
       const res = storageService.createReminder(data);
       setReminders(storageService.getReminders());
+      apiClient.createReminder(data).then((serverReminder) => {
+        if (serverReminder) {
+          apiClient.getReminders().then((list) => {
+            if (list) {
+              setReminders(list);
+              storageService.saveReminders(list);
+            }
+          }).catch(() => {});
+        }
+      }).catch((e) => console.error('Failed to create reminder on server:', e));
       return res;
     },
     []
   );
 
+  const updateReminder = useCallback((id: string, updates: Partial<Reminder>) => {
+    const list = storageService.getReminders();
+    const idx = list.findIndex((r) => r.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+      storageService.saveReminders(list);
+      setReminders([...list]);
+    }
+    apiClient.updateReminder(id, updates).then(() => {
+      apiClient.getReminders().then((serverList) => {
+        if (serverList) {
+          setReminders(serverList);
+          storageService.saveReminders(serverList);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
   const cancelReminder = useCallback((id: string) => {
     const res = storageService.cancelReminder(id);
     setReminders(storageService.getReminders());
-    apiClient.updateReminder(id, { status: 'cancelled', enabled: false }).catch(() => {});
+    apiClient.dismissReminder(id).then(() => {
+      apiClient.getReminders().then((list) => {
+        if (list) {
+          setReminders(list);
+          storageService.saveReminders(list);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
     return res;
   }, []);
 
   const completeReminder = useCallback((id: string) => {
     const res = storageService.completeReminder(id);
     setReminders(storageService.getReminders());
-    apiClient.updateReminder(id, { status: 'completed', enabled: false }).catch(() => {});
+    apiClient.completeReminder(id).then(() => {
+      apiClient.getReminders().then((list) => {
+        if (list) {
+          setReminders(list);
+          storageService.saveReminders(list);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
     return res;
   }, []);
 
-  const snoozeReminder = useCallback((id: string, hours: number = 24) => {
+  const snoozeReminder = useCallback((id: string, hours: number = 24, minutes?: number, customDateTime?: string) => {
     const res = storageService.snoozeReminder(id, hours);
     setReminders(storageService.getReminders());
-    apiClient.updateReminder(id, { dateTime: res.dateTime, status: 'upcoming', enabled: true }).catch(() => {});
+    apiClient.snoozeReminder(id, { hours, minutes, customDateTime }).then(() => {
+      apiClient.getReminders().then((list) => {
+        if (list) {
+          setReminders(list);
+          storageService.saveReminders(list);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
     return res;
   }, []);
 
   const restoreReminder = useCallback((id: string) => {
     const res = storageService.restoreReminder(id);
     setReminders(storageService.getReminders());
-    apiClient.updateReminder(id, { status: 'upcoming', enabled: true }).catch(() => {});
+    apiClient.updateReminder(id, { status: 'upcoming', enabled: true }).then(() => {
+      apiClient.getReminders().then((list) => {
+        if (list) {
+          setReminders(list);
+          storageService.saveReminders(list);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
     return res;
   }, []);
 
   const deleteReminder = useCallback((id: string) => {
     storageService.deleteReminder(id);
     setReminders(storageService.getReminders());
-    apiClient.deleteReminder(id).catch(() => {});
+    apiClient.deleteReminder(id).then(() => {
+      apiClient.getReminders().then((list) => {
+        if (list) {
+          setReminders(list);
+          storageService.saveReminders(list);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  const refreshReminders = useCallback(() => {
+    apiClient.getReminders().then((list) => {
+      if (list) {
+        setReminders(list);
+        storageService.saveReminders(list);
+      }
+    }).catch(() => {});
   }, []);
 
   // Notifications
@@ -457,6 +554,109 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSidebarCollapsed((prev) => !prev);
   }, []);
 
+  const refreshUsers = useCallback(async () => {
+    try {
+      const serverUsers = await apiClient.getUsers();
+      if (serverUsers && serverUsers.length > 0) {
+        setUsers(serverUsers);
+      }
+    } catch {
+      const community = storageService.getCommunityUsers();
+      const mapped = community
+        .map((u) => storageService.getUserSocialProfile(u.id, userProfile.id || 'user-1'))
+        .filter(Boolean) as UserSocialProfile[];
+      setUsers(mapped);
+    }
+  }, [userProfile.id]);
+
+  const getUserProfileById = useCallback(
+    async (id: string): Promise<UserSocialProfile | null> => {
+      try {
+        const u = await apiClient.getUser(id);
+        return u;
+      } catch {
+        return storageService.getUserSocialProfile(id, userProfile.id || 'user-1');
+      }
+    },
+    [userProfile.id]
+  );
+
+  const followUser = useCallback(
+    async (targetId: string, requiresRequest?: boolean) => {
+      try {
+        await apiClient.followUser(targetId, requiresRequest);
+        await refreshUsers();
+      } catch (e) {
+        console.error('Failed to follow user:', e);
+        throw e;
+      }
+    },
+    [refreshUsers]
+  );
+
+  const unfollowUser = useCallback(
+    async (targetId: string) => {
+      try {
+        await apiClient.unfollowUser(targetId);
+        await refreshUsers();
+      } catch (e) {
+        console.error('Failed to unfollow user:', e);
+        throw e;
+      }
+    },
+    [refreshUsers]
+  );
+
+  const respondFollowRequest = useCallback(
+    async (followerId: string, action: 'accept' | 'decline') => {
+      try {
+        await apiClient.respondFollowRequest(followerId, action);
+        await refreshUsers();
+      } catch (e) {
+        console.error('Failed to respond to follow request:', e);
+        throw e;
+      }
+    },
+    [refreshUsers]
+  );
+
+  const sendCollaborationRequest = useCallback(
+    async (projectId: string, skills: string, message: string) => {
+      try {
+        const created = await apiClient.createCollaborationRequest({
+          projectId,
+          skills,
+          message,
+        });
+        setCollaborationRequests((prev) => [created, ...prev]);
+        return created;
+      } catch (e) {
+        console.error('Failed to create collaboration request:', e);
+        throw e;
+      }
+    },
+    []
+  );
+
+  const respondCollaborationRequest = useCallback(
+    async (requestId: string, action: 'accept' | 'decline') => {
+      try {
+        const updated = await apiClient.respondCollaborationRequest(requestId, action);
+        setCollaborationRequests((prev) =>
+          prev.map((r) => (r.id === requestId ? updated : r))
+        );
+        if (action === 'accept') {
+          refreshProjects();
+        }
+        return updated;
+      } catch (e) {
+        console.error('Failed to respond to collaboration request:', e);
+        throw e;
+      }
+    },
+    [refreshProjects]
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -466,6 +666,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         notifications,
         fusionProposals,
         userProfile,
+        users,
+        collaborationRequests,
         sidebarCollapsed,
         mobileDrawerOpen,
         theme,
@@ -473,6 +675,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         initError,
         isSyncing,
         reloadAll,
+        refreshUsers,
+        getUserProfileById,
+        followUser,
+        unfollowUser,
+        respondFollowRequest,
+        sendCollaborationRequest,
+        respondCollaborationRequest,
         createProject,
         updateProject,
         deleteProject,
@@ -489,11 +698,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rejectJoinRequest,
         removeMember,
         createReminder,
+        updateReminder,
         cancelReminder,
         completeReminder,
         snoozeReminder,
         restoreReminder,
         deleteReminder,
+        refreshReminders,
         markNotificationRead,
         markAllNotificationsRead,
         createFusionProposal,

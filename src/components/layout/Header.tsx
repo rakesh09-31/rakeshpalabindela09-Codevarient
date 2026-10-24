@@ -8,6 +8,7 @@ import {
   Menu,
   Sun,
   Moon,
+  User,
   Settings,
   ChevronDown,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const pageTitles: Record<string, string> = {
   '/revival-studio': 'Revival Studio',
   '/fusion': 'Project Fusion',
   '/discover': 'Discover Archive',
+  '/profile': 'Profile Dashboard',
   '/teams': 'Collectives & Teams',
   '/reminders': 'Reminders',
   '/analytics': 'Archive Analytics',
@@ -265,14 +267,32 @@ export default function Header() {
                 transition={{ duration: 0.16 }}
                 className="absolute right-0 mt-2 w-56 rounded-[var(--radius-lg)] bg-[var(--color-surface)] border border-[var(--color-border)] shadow-[var(--shadow-popover)] p-2 z-50 text-xs"
               >
-                <div className="px-3 py-2 border-b border-[var(--color-border)] mb-1">
-                  <p className="font-semibold text-[var(--color-text)] truncate">
-                    {userProfile.name || 'Alex Rivera'}
+                <div
+                  onClick={() => {
+                    navigate('/profile');
+                    setShowProfileMenu(false);
+                  }}
+                  className="px-3 py-2 border-b border-[var(--color-border)] mb-1 cursor-pointer hover:bg-[var(--color-surface-hover)] rounded-t-[var(--radius-md)] transition-colors"
+                >
+                  <p className="font-semibold text-[var(--color-text)] truncate flex items-center justify-between">
+                    <span>{userProfile.name || 'Alex Rivera'}</span>
+                    <span className="text-[10px] font-mono text-[var(--color-brand)] uppercase">Profile</span>
                   </p>
                   <p className="text-[11px] text-[var(--color-text-muted)] truncate">
                     {userProfile.email || 'alex@gardenofideas.dev'}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => {
+                    navigate('/profile');
+                    setShowProfileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-sm)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] text-left transition-colors cursor-pointer font-medium"
+                >
+                  <User className="w-4 h-4 text-[#8B2FE8]" />
+                  View Profile & Portfolio
+                </button>
 
                 <button
                   onClick={() => {

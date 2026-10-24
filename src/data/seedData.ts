@@ -9,6 +9,7 @@ import type {
 export const INITIAL_USER_PROFILE: UserProfile = {
   id: 'user-1',
   name: 'Alex Rivera',
+  username: 'alexrivera',
   email: 'alex.rivera@gardenofideas.dev',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   bio: 'Full-stack builder passionate about climate tech, developer ergonomics, and digital gardening.',
@@ -28,6 +29,102 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   },
   createdAt: '2025-01-15T09:00:00.000Z',
 };
+
+export const INITIAL_COMMUNITY_USERS: UserProfile[] = [
+  INITIAL_USER_PROFILE,
+  {
+    id: 'user-2',
+    name: 'Elena Rostova',
+    username: 'elenarostova',
+    email: 'elena.rostova@gardenofideas.dev',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    bio: 'Product designer & design systems specialist. Crafting accessible, delightful interfaces for open initiatives.',
+    skills: ['UX Design', 'Design Systems', 'Figma', 'User Research', 'Accessibility'],
+    technologies: ['Figma', 'CSS Modules', 'Tailwind CSS', 'Storybook', 'Next.js'],
+    availability: 'part-time',
+    theme: 'dark',
+    notificationPrefs: {
+      projectUpdates: true,
+      teamEvents: true,
+      aiRecommendations: true,
+      reminders: false,
+    },
+    privacyDefaults: {
+      defaultVisibility: 'public',
+      showProfile: true,
+    },
+    createdAt: '2025-02-01T10:00:00.000Z',
+  },
+  {
+    id: 'user-3',
+    name: 'Devon Vance',
+    username: 'devonvance',
+    email: 'devon.vance@gardenofideas.dev',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    bio: 'Systems hacker, compiler enthusiast, and Rust backend developer. Turning slow algorithms into blazing fast services.',
+    skills: ['Rust', 'C++', 'Go', 'Algorithms', 'Distributed Systems'],
+    technologies: ['Rust', 'Tokio', 'Wasm', 'WebGPU', 'Docker', 'PostgreSQL'],
+    availability: 'full-time',
+    theme: 'dark',
+    notificationPrefs: {
+      projectUpdates: true,
+      teamEvents: false,
+      aiRecommendations: true,
+      reminders: true,
+    },
+    privacyDefaults: {
+      defaultVisibility: 'public',
+      showProfile: true,
+    },
+    createdAt: '2025-02-15T12:00:00.000Z',
+  },
+  {
+    id: 'user-4',
+    name: 'Maya Lin',
+    username: 'mayalin',
+    email: 'maya.lin@gardenofideas.dev',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    bio: 'Mobile engineer & civic technologist. Creating Flutter experiences that improve urban sustainability and mobility.',
+    skills: ['Flutter', 'Dart', 'Mobile UX', 'Accessibility', 'State Management'],
+    technologies: ['Flutter', 'Dart', 'Firebase', 'Fastlane', 'Bloc'],
+    availability: 'part-time',
+    theme: 'light',
+    notificationPrefs: {
+      projectUpdates: true,
+      teamEvents: true,
+      aiRecommendations: true,
+      reminders: true,
+    },
+    privacyDefaults: {
+      defaultVisibility: 'public',
+      showProfile: true,
+    },
+    createdAt: '2025-03-01T08:00:00.000Z',
+  },
+  {
+    id: 'user-5',
+    name: 'Tariq Johnson',
+    username: 'tariqjohnson',
+    email: 'tariq.johnson@gardenofideas.dev',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    bio: 'Geospatial data engineer. OpenStreetMap contributor mapping green urban infrastructure and micro-mobility.',
+    skills: ['GIS', 'GeoDjango', 'PostGIS', 'OpenStreetMap', 'Python'],
+    technologies: ['Python', 'PostGIS', 'GDAL', 'GeoServer', 'Django'],
+    availability: 'occasional',
+    theme: 'system',
+    notificationPrefs: {
+      projectUpdates: true,
+      teamEvents: true,
+      aiRecommendations: false,
+      reminders: false,
+    },
+    privacyDefaults: {
+      defaultVisibility: 'public',
+      showProfile: true,
+    },
+    createdAt: '2025-03-10T14:00:00.000Z',
+  },
+];
 
 export const INITIAL_PROJECTS: Project[] = [
   {

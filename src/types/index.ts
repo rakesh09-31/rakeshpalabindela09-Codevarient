@@ -139,18 +139,121 @@ export interface JoinRequest {
   createdAt: string;
 }
 
+export type ReminderCategory = 'continue-project' | 'finish-task' | 'review' | 'deadline' | 'follow-up';
+export type ReminderPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type ReminderChannel = 'in-app' | 'email' | 'whatsapp';
+export type NotificationSchedule = 'at-due-time' | '10m-before' | '1h-before' | '1d-before' | 'custom';
+export type ReminderRecurrence = 'once' | 'daily' | 'weekly' | 'monthly' | 'custom';
+export type ReminderStatus = 'upcoming' | 'completed' | 'cancelled' | 'dismissed';
+
 export interface Reminder {
   id: string;
+  userId?: string;
   projectId?: string;
   projectTitle?: string;
   title: string;
   message: string;
+  description?: string;
+  category?: ReminderCategory;
+  priority?: ReminderPriority;
   dateTime: string;
-  recurrence: 'once' | 'daily' | 'weekly' | 'monthly';
-  channel: 'in-app' | 'email' | 'both';
+  timezone?: string;
+  recurrence: ReminderRecurrence;
+  customRecurrenceDays?: number;
+  channel: 'in-app' | 'email' | 'both' | 'whatsapp' | 'all';
+  channels?: ReminderChannel[];
+  contactEmail?: string;
+  contactPhone?: string;
+  whatsappConsent?: boolean;
+  whatsappConsentTimestamp?: string;
+  notificationSchedule?: NotificationSchedule;
+  customLeadTimeMinutes?: number;
   enabled: boolean;
-  status: 'upcoming' | 'completed' | 'cancelled';
+  status: ReminderStatus;
+  snoozeCount?: number;
+  lastNotifiedAt?: string;
+  deliveryStatus?: {
+    email?: 'scheduled' | 'sent' | 'failed' | 'not-configured';
+    whatsapp?: 'scheduled' | 'sent' | 'failed' | 'not-configured' | 'missing-consent';
+    inApp?: 'scheduled' | 'sent' | 'failed';
+  };
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ScheduledNotificationJob {
+  id: string;
+  reminderId: string;
+  userId: string;
+  channel: ReminderChannel;
+  scheduledFor: string;
+  status: 'scheduled' | 'sending' | 'sent' | 'failed' | 'cancelled';
+  idempotencyKey: string;
+  attemptCount: number;
+  maxRetries: number;
+  lastAttemptAt?: string;
+  errorMessage?: string;
+  providerResponse?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReminderEvent {
+  id: string;
+  reminderId: string;
+  userId: string;
+  eventType: 'created' | 'updated' | 'rescheduled' | 'snoozed' | 'completed' | 'dismissed' | 'notification_sent' | 'notification_failed' | 'dispatched' | 'failed';
+  details: string;
+  timestamp: string;
+  channel?: ReminderChannel;
+}
+
+export interface ReminderMetrics {
+  total: number;
+  upcoming: number;
+  overdue: number;
+  dueToday: number;
+  dueTomorrow: number;
+  thisWeek: number;
+  later: number;
+  completed: number;
+  dismissed: number;
+  completionRate: number;
+}
+
+export interface ReminderSuggestion {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  title?: string;
+  suggestedTitle: string;
+  message?: string;
+  suggestedDescription: string;
+  category?: ReminderCategory;
+  suggestedCategory: ReminderCategory;
+  priority?: ReminderPriority;
+  suggestedPriority: ReminderPriority;
+  suggestedDateTime?: string;
+  suggestedDueOffsetHours: number;
+  rationale: string;
+}
+
+export interface ProviderConfigStatus {
+  email: {
+    configured: boolean;
+    provider: string;
+    details: string;
+  };
+  whatsapp: {
+    configured: boolean;
+    provider: string;
+    details: string;
+  };
+  inApp?: {
+    configured: boolean;
+    provider: string;
+    details: string;
+  };
 }
 
 export interface Notification {
@@ -182,11 +285,18 @@ export interface FusionProposal {
   proposedMilestones: { title: string; description: string; }[];
   createdAt: string;
   createdProjectId?: string; // set after approval
+  // Detailed synthesis fields
+  whyFit?: string;
+  proposedUX?: string;
+  confirmedFacts?: string[];
+  assumptions?: string[];
+  unresolvedQuestions?: string[];
 }
 
 export interface UserProfile {
   id: string;
   name: string;
+  username?: string;
   email: string;
   avatar?: string;
   bio?: string;
@@ -207,6 +317,44 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export type FollowStatus = 'none' | 'following' | 'requested' | 'incoming_request';
+
+export interface FollowRecord {
+  id: string;
+  followerId: string;
+  followingId: string;
+  status: 'following' | 'requested';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserSocialProfile extends UserProfile {
+  username: string;
+  followersCount: number;
+  followingCount: number;
+  projectsCount: number;
+  completedCount: number;
+  revivedCount: number;
+  successRate: number; // (completed + revived) / total * 100
+  followStatus?: FollowStatus;
+}
+
+export interface CollaborationRequest {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  requesterId: string;
+  requesterName: string;
+  requesterAvatar?: string;
+  requesterUsername: string;
+  ownerId: string;
+  skills: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AIChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -214,6 +362,9 @@ export interface AIChatMessage {
   timestamp: string;
   isSimulated?: boolean;
   suggestions?: AISuggestion[];
+  suitability?: 'SUITABLE' | 'NOT_RECOMMENDED' | 'NEEDS_INFO';
+  suitablePairIds?: string[];
+  proposedConceptTitle?: string;
 }
 
 export interface AISuggestion {

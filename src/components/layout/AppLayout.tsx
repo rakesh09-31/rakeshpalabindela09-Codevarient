@@ -14,7 +14,10 @@ import { useApp } from '../../contexts/AppContext';
 export function AppLayout() {
   const { sidebarCollapsed, mobileDrawerOpen, setMobileDrawerOpen } = useApp();
   const location = useLocation();
-  const isStudio = location.pathname === '/revival-studio';
+  const isFixedWorkspace =
+    location.pathname === '/revival-studio' ||
+    location.pathname === '/fusion' ||
+    location.pathname === '/project-fusion';
 
   // Handle Escape key to close mobile drawer
   useEffect(() => {
@@ -28,7 +31,7 @@ export function AppLayout() {
   }, [mobileDrawerOpen, setMobileDrawerOpen]);
 
   return (
-    <div className={`bg-[var(--color-page)] text-[var(--color-text)] transition-colors flex flex-col ${isStudio ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`bg-[var(--color-page)] text-[var(--color-text)] transition-colors flex flex-col ${isFixedWorkspace ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar />
@@ -131,20 +134,20 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div
         className={`transition-all duration-200 flex flex-col ${
-          isStudio ? 'h-screen overflow-hidden' : 'min-h-screen'
+          isFixedWorkspace ? 'h-screen overflow-hidden' : 'min-h-screen'
         } ${sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'}`}
       >
         <Header />
         <main
           className={`w-full max-w-[1440px] mx-auto ${
-            isStudio
+            isFixedWorkspace
               ? 'flex-1 min-h-0 overflow-hidden flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4'
               : 'flex-1 px-4 sm:px-6 md:px-8 py-8'
           }`}
         >
           <Outlet />
         </main>
-        {!isStudio && <Footer />}
+        {!isFixedWorkspace && <Footer />}
       </div>
     </div>
   );

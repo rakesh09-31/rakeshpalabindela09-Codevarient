@@ -53,6 +53,26 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(dbManager.getTeams()));
     return;
   }
+  if (urlObj.pathname === '/api/users') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    const allUsers = dbManager.getUserProfiles();
+    res.end(JSON.stringify(allUsers.map((u) => dbManager.getUserSocialProfile(u.id, 'user-1'))));
+    return;
+  }
+  if (urlObj.pathname.startsWith('/api/users/')) {
+    const id = urlObj.pathname.replace('/api/users/', '').split('/')[0];
+    const profile = dbManager.getUserSocialProfile(id, 'user-1');
+    if (profile) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(profile));
+      return;
+    }
+  }
+  if (urlObj.pathname === '/api/collaborations') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(dbManager.getCollaborationRequests()));
+    return;
+  }
 
   let filePath = path.join(DIST_DIR, urlObj.pathname);
 
@@ -78,13 +98,12 @@ await new Promise((resolve) => server.listen(PORT, resolve));
 console.log(`Preview server listening on http://localhost:${PORT}`);
 
 const targets = [
-  { name: 'dashboard_carousel_dark', path: '/?nosplash&theme=dark', label: 'Dashboard Carousel (Dark)', size: '1440,950' },
-  { name: 'dashboard_carousel_full_dark', path: '/?nosplash&theme=dark', label: 'Dashboard Carousel Full (Dark)', size: '1440,1950' },
-  { name: 'dashboard_carousel_light', path: '/?nosplash&theme=light', label: 'Dashboard Carousel (Light)', size: '1440,950' },
-  { name: 'dashboard_carousel_full_light', path: '/?nosplash&theme=light', label: 'Dashboard Carousel Full (Light)', size: '1440,1950' },
-  { name: 'dashboard_carousel_tablet', path: '/?nosplash&theme=dark', label: 'Dashboard Carousel (Tablet)', size: '820,1180' },
-  { name: 'dashboard_carousel_mobile', path: '/?nosplash&theme=dark', label: 'Dashboard Carousel (Mobile Dark)', size: '390,1650' },
-  { name: 'dashboard_carousel_mobile_light', path: '/?nosplash&theme=light', label: 'Dashboard Carousel (Mobile Light)', size: '390,1650' },
+  { name: 'fusion_advisor_dark', path: '/fusion?nosplash&theme=dark', label: 'AI Project Fusion Workspace (Dark)', size: '1440,950' },
+  { name: 'fusion_advisor_light', path: '/fusion?nosplash&theme=light', label: 'AI Project Fusion Workspace (Light)', size: '1440,950' },
+  { name: 'fusion_pair_selected_dark', path: '/fusion?nosplash&theme=dark&project1=proj-2&project2=proj-5', label: 'AI Project Fusion Selected Pair (Dark)', size: '1440,950' },
+  { name: 'fusion_advisor_mobile', path: '/fusion?nosplash&theme=dark', label: 'AI Project Fusion Mobile (Dark)', size: '390,950' },
+  { name: 'canvas_mode_dark', path: '/?nosplash&theme=dark&mode=canvas', label: 'Action Canvas Workspace (Dark)', size: '1440,950' },
+  { name: 'canvas_mode_light', path: '/?nosplash&theme=light&mode=canvas', label: 'Action Canvas Workspace (Light)', size: '1440,950' },
 ];
 
 fs.mkdirSync('screenshots', { recursive: true });
@@ -118,7 +137,12 @@ for (const target of targets) {
       console.error(`  ✗ Failed to create screenshot for ${target.name}`);
     }
   } catch (err) {
-    console.error(`  ✗ Error capturing ${target.name}:`, err.message);
+    if (fs.existsSync(outPath)) {
+      fs.copyFileSync(outPath, artifactPath);
+      console.log(`  ✓ Saved ${target.name}.png (${fs.statSync(outPath).size} bytes)`);
+    } else {
+      console.error(`  ✗ Error capturing ${target.name}:`, err.message);
+    }
   } finally {
     try {
       fs.rmSync(tmpProfile, { recursive: true, force: true });

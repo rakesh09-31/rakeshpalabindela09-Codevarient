@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   ArrowRight,
@@ -34,6 +34,7 @@ import {
 import { useApp } from '../contexts/AppContext';
 import { Badge, ProgressBar, Button } from '../components/ui';
 import { Project } from '../types';
+import { ActionCanvas } from '../components/canvas/ActionCanvas';
 
 // ============================================================================
 // Glossy Carousel Category Artwork Themes & Generative Cover Engine
@@ -160,6 +161,7 @@ function ProjectArtwork({
   return (
     <div
       onClick={onClick}
+      aria-hidden="true"
       className={`relative w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[4/3] rounded-2xl md:rounded-3xl bg-gradient-to-br ${theme.gradientLight} dark:${theme.gradientDark} border ${theme.borderLight} dark:${theme.borderDark} p-5 sm:p-6 flex flex-col justify-between overflow-hidden shadow-sm group cursor-pointer transition-all duration-300 hover:shadow-md select-none`}
     >
       {/* Glossy Diagonal Reflection Sheen */}
@@ -219,7 +221,12 @@ export function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'carousel' | 'grid' | 'list'>('carousel');
+  const [searchParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState<'carousel' | 'grid' | 'list' | 'canvas'>(() => {
+    return searchParams.get('mode') === 'canvas' || searchParams.get('canvas') === 'true'
+      ? 'canvas'
+      : 'carousel';
+  });
 
   // Continuous Circular Carousel State Machine
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -336,7 +343,7 @@ export function DashboardPage() {
     setAnimDirection('prev');
   }, [filteredProjects.length, prefersReducedMotion]);
 
-  // Handle completion of 450ms slide transition
+  // Handle completion of 220ms fast slide transition
   useEffect(() => {
     if (!animDirection || filteredProjects.length <= 1) return;
     const timer = setTimeout(() => {
@@ -347,7 +354,7 @@ export function DashboardPage() {
       }
       setAnimDirection(null);
       isAnimatingRef.current = false;
-    }, 450);
+    }, 220);
     return () => clearTimeout(timer);
   }, [animDirection, filteredProjects.length]);
 
@@ -595,12 +602,14 @@ export function DashboardPage() {
     animDirection === 'next' ? -stepPct : animDirection === 'prev' ? stepPct : 0;
 
   return (
-    <div className="space-y-10 pb-16 relative overflow-hidden">
+    <div className="relative pb-16">
       {/* Decorative Ambient Background Lighting */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-b from-[var(--color-brand)]/10 via-[var(--color-brand)]/3 to-transparent blur-3xl pointer-events-none rounded-full" />
-      <div className="absolute top-1/4 -right-48 w-[600px] h-[600px] bg-gradient-to-b from-[var(--color-accent)]/8 to-transparent blur-3xl pointer-events-none rounded-full" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-b from-[#8B2FE8]/12 via-[#C026D3]/4 to-transparent blur-3xl pointer-events-none rounded-full" />
+      <div className="absolute top-1/3 -right-48 w-[600px] h-[600px] bg-gradient-to-b from-[#4568DC]/8 to-transparent blur-3xl pointer-events-none rounded-full" />
 
-      {/* ================= 1. WELCOME HERO SECTION ================= */}
+      {/* Distinct Surface Container framing entire dashboard */}
+      <div className="relative z-10 bg-[#FFFFFF]/95 dark:bg-[#0E0A16] border border-[#D8CFE6] dark:border-[#382B49] rounded-3xl hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-within:border-[#8B2FE8] dark:focus-within:border-[#C026D3] p-5 sm:p-7 md:p-9 shadow-[0_16px_48px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:hover:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:focus-within:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] space-y-10 transition-all duration-200">
+        {/* ================= 1. WELCOME HERO SECTION ================= */}
       <section className="relative z-10 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-subtle)] border border-[var(--color-border)] rounded-[var(--radius-xl)] p-6 md:p-8 shadow-[var(--shadow-card)] flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-colors">
         <div className="space-y-2 max-w-2xl">
           <div className="flex items-center gap-2">
@@ -624,7 +633,19 @@ export function DashboardPage() {
           </p>
         </div>
 
-        <div className="shrink-0 self-start sm:self-center">
+        <div className="shrink-0 self-start sm:self-center flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'canvas' ? 'carousel' : 'canvas')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm border ${
+              viewMode === 'canvas'
+                ? 'bg-purple-600 hover:bg-purple-500 text-white border-purple-400'
+                : 'bg-purple-950/40 hover:bg-purple-900/50 text-purple-200 border-purple-500/40'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>{viewMode === 'canvas' ? 'Exit Canvas Mode' : 'Action Canvas Protocol'}</span>
+          </button>
           <Button
             variant="primary"
             size="md"
@@ -783,6 +804,19 @@ export function DashboardPage() {
             {/* View Mode Switcher */}
             <div className="inline-flex h-[38px] items-center rounded-[var(--radius-md)] p-1 border border-[var(--color-border)] bg-[var(--color-surface-subtle)]">
               <button
+                onClick={() => setViewMode('canvas')}
+                className={`h-[30px] px-2.5 flex items-center gap-1.5 rounded-[var(--radius-sm)] text-xs font-semibold transition-colors cursor-pointer ${
+                  viewMode === 'canvas'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                }`}
+                title="The Canvas Protocol: Drag & Drop Action Workspace"
+                aria-label="The Canvas Protocol Action Workspace"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                <span className="hidden sm:inline">Canvas</span>
+              </button>
+              <button
                 onClick={() => setViewMode('carousel')}
                 className={`h-[30px] px-2.5 flex items-center gap-1.5 rounded-[var(--radius-sm)] text-xs font-semibold transition-colors cursor-pointer ${
                   viewMode === 'carousel'
@@ -847,6 +881,8 @@ export function DashboardPage() {
               </Button>
             </div>
           </div>
+        ) : viewMode === 'canvas' ? (
+          <ActionCanvas onExitCanvas={() => setViewMode('carousel')} />
         ) : viewMode === 'carousel' ? (
           /* ================= CONTINUOUS CIRCULAR PROJECT CAROUSEL ================= */
           <div
@@ -961,7 +997,7 @@ export function DashboardPage() {
                   transform: `translateX(calc(${baseTrackOffset}% + ${trackTranslation}%))`,
                   transition:
                     animDirection && !prefersReducedMotion
-                      ? 'transform 450ms cubic-bezier(0.16, 1, 0.3, 1)'
+                      ? 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)'
                       : 'none',
                   willChange: 'transform',
                 }}
@@ -983,7 +1019,7 @@ export function DashboardPage() {
                       }}
                       className={`transition-all ${
                         animDirection && !prefersReducedMotion
-                          ? 'duration-450 ease-[cubic-bezier(0.16,1,0.3,1)]'
+                          ? 'duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]'
                           : ''
                       } ${
                         isCenter
@@ -1028,10 +1064,10 @@ export function DashboardPage() {
                     >
                       {/* Glossy Card Container */}
                       <div
-                        className={`relative rounded-3xl border transition-all duration-300 overflow-hidden ${
+                        className={`relative rounded-3xl border transition-all duration-200 overflow-hidden outline-none ${
                           isCenter
-                            ? 'border-[#E8E2D6] dark:border-white/15 bg-gradient-to-b from-[#FFFFFF] via-[#FAF8F5] to-[#F5F2ED] dark:from-[#241B33]/95 dark:via-[#1B1428]/95 dark:to-[#130E1F]/95 shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12)] dark:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.12)] ring-1 ring-black/5 dark:ring-white/10'
-                            : 'border-[#E8E2D6]/60 dark:border-white/10 bg-[#FFFDF9]/80 dark:bg-[#1C1528]/80 shadow-sm'
+                            ? 'border-[#E8E2D6] dark:border-white/15 hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-visible:border-[#8B2FE8] dark:focus-visible:border-[#C026D3] hover:shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12),0_0_25px_rgba(139,47,232,0.2)] dark:hover:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.22)] focus-visible:shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12),0_0_25px_rgba(139,47,232,0.2)] dark:focus-visible:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.22)] focus-visible:ring-2 focus-visible:ring-[#8B2FE8]/40 dark:focus-visible:ring-[#C026D3]/40 bg-gradient-to-b from-[#FFFFFF] via-[#FAF8F5] to-[#F5F2ED] dark:from-[#241B33]/95 dark:via-[#1B1428]/95 dark:to-[#130E1F]/95 shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12)] dark:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.12)] ring-1 ring-black/5 dark:ring-white/10'
+                            : 'border-[#E8E2D6]/60 dark:border-white/10 hover:border-[#8B2FE8]/60 dark:hover:border-[#C026D3]/60 focus-visible:border-[#8B2FE8]/70 dark:focus-visible:border-[#C026D3]/70 hover:shadow-[0_0_15px_rgba(139,47,232,0.12)] bg-[#FFFDF9]/80 dark:bg-[#1C1528]/80 shadow-sm'
                         } p-6 sm:p-8 md:p-9`}
                       >
                         {/* Glossy Top Sheen Edge */}
@@ -1635,6 +1671,7 @@ export function DashboardPage() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }

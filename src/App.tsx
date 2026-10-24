@@ -9,12 +9,14 @@ import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { RevivalStudioPage } from './pages/RevivalStudioPage';
 import { FusionPage } from './pages/FusionPage';
+import { FusionProposalPage } from './pages/FusionProposalPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { TeamsPage } from './pages/TeamsPage';
 import { RemindersPage } from './pages/RemindersPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import ProjectFormPage from './pages/ProjectFormPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 export function App() {
   return (
@@ -30,7 +32,12 @@ export function App() {
             <Route path="projects/:id" element={<ProjectDetailPage />} />
             <Route path="revival-studio" element={<RevivalStudioPage />} />
             <Route path="fusion" element={<FusionPage />} />
+            <Route path="fusion/proposal/:proposalId" element={<FusionProposalPage />} />
+            <Route path="project-fusion" element={<FusionPage />} />
+            <Route path="project-fusion/proposal/:proposalId" element={<FusionProposalPage />} />
             <Route path="discover" element={<DiscoverPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile/:id" element={<ProfilePage />} />
             <Route path="teams" element={<TeamsPage />} />
             <Route path="reminders" element={<RemindersPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
