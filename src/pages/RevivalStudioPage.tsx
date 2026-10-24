@@ -234,6 +234,7 @@ export function RevivalStudioPage() {
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedProjectCardRef = useRef<HTMLButtonElement | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -243,33 +244,32 @@ export function RevivalStudioPage() {
     scrollToBottom();
   }, [chatMessages, isTyping, isLoadingOverview]);
 
-  // Generate grounded initial overview when workspace opens with selected project
+  // Scroll selected project into view in the project selection strip
+  useEffect(() => {
+    if (selectedProjectCardRef.current) {
+      selectedProjectCardRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [selectedProjectId]);
+
+  // Set concise, conversational initial welcome message when workspace opens
   useEffect(() => {
     if (!selectedProject) return;
 
-    let isMounted = true;
-    setIsLoadingOverview(true);
     setErrorState(null);
+    setIsLoadingOverview(false);
 
-    // Call server AI assistant for grounded initial overview
-    apiClient
-      .askAiAssistant(selectedProject.id, 'overview', 'overview')
-      .then((overviewMsg) => {
-        if (!isMounted) return;
-        setChatMessages([overviewMsg]);
-        setIsLoadingOverview(false);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        console.warn('Overview fetch error, generating client grounded overview:', err);
-        const fallbackMsg = generateClientFallbackOverview(selectedProject);
-        setChatMessages([fallbackMsg]);
-        setIsLoadingOverview(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    setChatMessages([
+      {
+        id: `welcome-${selectedProject.id}`,
+        role: 'assistant',
+        content: `Hi! I'm ready to help you revive **${selectedProject.title}**. What would you like to understand or work on?`,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
   }, [selectedProjectId, selectedProject]);
 
   // Secondary Revival Capabilities
@@ -493,6 +493,39 @@ export function RevivalStudioPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      {/* ================= PROJECT SELECTION PANEL STRIP ================= */}
+      <div className="shrink-0 flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin px-0.5">
+        <span className="text-xs font-mono font-semibold text-[var(--color-text-muted)] shrink-0 flex items-center gap-1.5 pl-0.5">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--color-brand)]" />
+          <span>Active Project:</span>
+        </span>
+        {projects.map((p) => {
+          const isSelected = p.id === selectedProjectId;
+          return (
+            <button
+              key={p.id}
+              ref={isSelected ? selectedProjectCardRef : null}
+              data-project-id={p.id}
+              onClick={() => setSelectedProjectId(p.id)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shrink-0 flex items-center gap-2 cursor-pointer outline-none ${
+                isSelected
+                  ? 'bg-purple-500/15 dark:bg-purple-900/40 border-purple-500 dark:border-purple-400 text-purple-900 dark:text-purple-100 ring-2 ring-purple-500/50 shadow-md font-semibold'
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-hover)]'
+              }`}
+              aria-selected={isSelected}
+            >
+              {isSelected ? (
+                <div className="w-4 h-4 rounded-full bg-purple-600 dark:bg-purple-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                </div>
+              ) : null}
+              <span className="truncate max-w-[130px] sm:max-w-[180px]">{p.title}</span>
+              <Badge status={p.status} size="sm" />
+            </button>
+          );
+        })}
       </div>
 
       {/* Mobile Tab Switcher */}
@@ -761,14 +794,14 @@ export function RevivalStudioPage() {
                 <div className="flex justify-between py-1 border-b border-[var(--color-border)]/40">
                   <span className="text-[var(--color-text-muted)]">Blockers Logged:</span>
                   <span className="font-mono font-semibold text-[var(--color-text)]">
-                    {selectedProject.technicalBlockers.length} issues
+                    {selectedProject.technicalBlockers?.length || 0} issues
                   </span>
                 </div>
 
                 <div className="flex justify-between py-1 border-b border-[var(--color-border)]/40">
                   <span className="text-[var(--color-text-muted)]">Milestones:</span>
                   <span className="font-mono font-semibold text-[var(--color-text)]">
-                    {selectedProject.milestones.length} defined
+                    {selectedProject.milestones?.length || 0} defined
                   </span>
                 </div>
               </div>
@@ -779,7 +812,7 @@ export function RevivalStudioPage() {
                   Tech Ecosystem:
                 </span>
                 <div className="flex flex-wrap gap-1">
-                  {selectedProject.languages.concat(selectedProject.frameworks).map((tech) => (
+                  {(selectedProject.languages || []).concat(selectedProject.frameworks || []).map((tech) => (
                     <span
                       key={tech}
                       className="px-2 py-0.5 rounded-md text-[10px] font-mono border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)]"
@@ -787,7 +820,7 @@ export function RevivalStudioPage() {
                       {tech}
                     </span>
                   ))}
-                  {selectedProject.libraries.slice(0, 3).map((lib) => (
+                  {(selectedProject.libraries || []).slice(0, 3).map((lib) => (
                     <span
                       key={lib}
                       className="px-2 py-0.5 rounded-md text-[10px] font-mono border border-[var(--color-border)]/60 bg-black/5 dark:bg-white/5 text-[var(--color-text-secondary)]"
@@ -861,26 +894,26 @@ export function RevivalStudioPage() {
  * if network or backend initialization takes extra time.
  */
 function generateClientFallbackOverview(project: Project): AIChatMessage {
-  const stack = [...project.languages, ...project.frameworks, ...project.libraries].join(', ') || 'Standard web stack';
-  const reason = project.whyStopped || (project.technicalBlockers[0] ? `Technical roadblock: ${project.technicalBlockers[0]}` : 'Reason for pausing was not explicitly documented in the archive.');
+  const stack = [...(project.languages || []), ...(project.frameworks || []), ...(project.libraries || [])].join(', ') || 'Standard web stack';
+  const reason = project.whyStopped || (project.technicalBlockers?.[0] ? `Technical roadblock: ${project.technicalBlockers[0]}` : 'Reason for pausing was not explicitly documented in the archive.');
   const repoNotice = project.repoUrl
     ? `* **Repository URL**: [${project.repoUrl}](${project.repoUrl})`
     : `* **Repository URL**: *No repository URL recorded in project file.* (The AI has not inspected source code or repository files).`;
 
-  const content = `### 🌿 Grounded Project Overview: ${project.title}\n\n` +
-    `**${project.title}** is a **${project.category}** initiative preserved with **${project.status.toUpperCase()}** status (${project.progress}% weighted progress).\n\n` +
+  const content = `### 🌿 Grounded Project Overview: ${project.title || 'Untitled'}\n\n` +
+    `**${project.title || 'Untitled'}** is a **${project.category || 'General'}** initiative preserved with **${(project.status || 'paused').toUpperCase()}** status (${project.progress || 0}% weighted progress).\n\n` +
     `#### 🎯 Purpose & Intended Outcome\n` +
-    `* **Core Premise**: ${project.summary}\n` +
-    `* **Original Idea**: "${project.originalIdea || project.summary}"\n` +
+    `* **Core Premise**: ${project.summary || 'No summary recorded.'}\n` +
+    `* **Original Idea**: "${project.originalIdea || project.summary || 'Not recorded'}"\n` +
     `* **Target Audience**: ${project.targetAudience ? `**${project.targetAudience}**` : '*Not explicitly recorded in project dossier.*'}\n` +
     `* **Stated Goal**: ${project.goal || '*Not explicitly defined.*'}\n\n` +
     `#### 🛠️ Technology & Assets\n` +
     `* **Tech Stack**: ${stack}\n` +
-    `* **External APIs**: ${project.apis.length > 0 ? project.apis.join(', ') : 'None configured'}\n` +
+    `* **External APIs**: ${(project.apis?.length || 0) > 0 ? project.apis.join(', ') : 'None configured'}\n` +
     `${repoNotice}\n\n` +
     `#### 📊 Development Health & Dormancy\n` +
-    `* **Features**: ${project.completedFeatures.length} completed, ${project.inProgressFeatures.length} in progress, ${project.plannedFeatures.length} planned\n` +
-    `* **Milestone Progress**: ${project.milestones.length} milestones defined\n` +
+    `* **Features**: ${project.completedFeatures?.length || 0} completed, ${project.inProgressFeatures?.length || 0} in progress, ${project.plannedFeatures?.length || 0} planned\n` +
+    `* **Milestone Progress**: ${project.milestones?.length || 0} milestones defined\n` +
     `* **Dormancy Reason**: *"${reason}"*\n\n` +
     `---\n` +
     `*Ask any question below about this project's architecture, features, blockers, or next steps to prepare your revival strategy.*`;

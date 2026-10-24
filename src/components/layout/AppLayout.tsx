@@ -31,7 +31,7 @@ export function AppLayout() {
   }, [mobileDrawerOpen, setMobileDrawerOpen]);
 
   return (
-    <div className={`bg-[var(--color-page)] text-[var(--color-text)] transition-colors flex flex-col ${isFixedWorkspace ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className="h-screen h-[100dvh] overflow-hidden flex flex-col bg-[var(--color-page)] text-[var(--color-text)] transition-colors">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar />
@@ -131,23 +131,25 @@ export function AppLayout() {
         )}
       </AnimatePresence>
 
-      {/* Main Content Area */}
+      {/* Main Content Column */}
       <div
-        className={`transition-all duration-200 flex flex-col ${
-          isFixedWorkspace ? 'h-screen overflow-hidden' : 'min-h-screen'
-        } ${sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'}`}
+        className={`flex-1 min-h-0 flex flex-col transition-all duration-200 overflow-hidden ${
+          sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[248px]'
+        }`}
       >
         <Header />
-        <main
-          className={`w-full max-w-[1440px] mx-auto ${
-            isFixedWorkspace
-              ? 'flex-1 min-h-0 overflow-hidden flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4'
-              : 'flex-1 px-4 sm:px-6 md:px-8 py-8'
-          }`}
-        >
-          <Outlet />
-        </main>
-        {!isFixedWorkspace && <Footer />}
+        {isFixedWorkspace ? (
+          <main className="flex-1 min-h-0 overflow-hidden flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 w-full max-w-[1440px] mx-auto">
+            <Outlet />
+          </main>
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
+            <main className="flex-1 px-4 sm:px-6 md:px-8 py-8 w-full max-w-[1440px] mx-auto">
+              <Outlet />
+            </main>
+            <Footer />
+          </div>
+        )}
       </div>
     </div>
   );

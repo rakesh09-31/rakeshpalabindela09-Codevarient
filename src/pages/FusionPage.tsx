@@ -348,20 +348,27 @@ export function FusionPage() {
     }
   };
 
-  // Trigger Grounded Initial Welcome when no messages are present
+  // Set concise, conversational initial welcome message when advisor opens
   useEffect(() => {
     if (messages.length === 0 && projects.length > 0) {
-      const sampleNames = projects.slice(0, 3).map((p) => `"${p.title}"`).join(', ');
+      let welcomeContent =
+        'Hi! I can help you explore whether these projects fit together. What would you like to compare or create?';
+      if (selectedProjects.length === 2) {
+        welcomeContent = `Hi! I can help you explore whether **${selectedProjects[0].title}** and **${selectedProjects[1].title}** fit together. What would you like to compare or create?`;
+      } else if (selectedProjects.length === 1) {
+        welcomeContent = `Hi! I can help you explore whether **${selectedProjects[0].title}** fits with another project. What would you like to compare or create?`;
+      }
+
       setMessages([
         {
           id: 'welcome-msg',
           role: 'assistant',
-          content: `### 👋 Welcome to the AI Project Fusion Advisor\n\nI analyze your saved projects (including ${sampleNames}) for architectural compatibility, feature overlap, and combined execution feasibility.\n\n* **Select 2 projects** in the left panel to assess whether they are suitable to combine.\n* **Or click any prompt chip below** to discover high-synergy combinations across your entire garden!`,
+          content: welcomeContent,
           timestamp: new Date().toISOString(),
         },
       ]);
     }
-  }, [projects, messages.length]);
+  }, [projects.length, selectedProjects, messages.length]);
 
   // Trigger Suitability Review from Selection Dock
   const handleReviewSuitability = () => {

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node tests/integrationTest.mjs && node tests/startupTimingTest.mjs && node tests/supabaseConnectionTest.mjs && node tests/repoUrlAndStudioScrollTest.mjs && node tests/statusTransitionAndDetailTest.mjs && node tests/canvasDndTest.mjs && node tests/socialProfileTest.mjs && node tests/carouselAndDashboardModulesTest.mjs && node tests/revivalStudioExplainerTest.mjs && node tests/aiFusionAdvisorTest.mjs && node tests/remindersFollowThroughTest.mjs",
+    "test": "node tests/integrationTest.mjs && node tests/startupTimingTest.mjs && node tests/supabaseConnectionTest.mjs && node tests/repoUrlAndStudioScrollTest.mjs && node tests/statusTransitionAndDetailTest.mjs && node tests/canvasDndTest.mjs && node tests/socialProfileTest.mjs && node tests/carouselAndDashboardModulesTest.mjs && node tests/revivalStudioExplainerTest.mjs && node tests/aiFusionAdvisorTest.mjs && node tests/remindersFollowThroughTest.mjs && node tests/dashboardCanvasUxTest.mjs && node tests/teamsCollaborationTest.mjs && node tests/verifyRouteRendering.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

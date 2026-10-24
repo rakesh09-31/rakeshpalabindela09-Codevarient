@@ -6,6 +6,8 @@ import {
   Task,
   TimelineEvent,
   Team,
+  TeamVisibility,
+  TeamJoinPolicy,
   Reminder,
   Notification,
   UserProfile,
@@ -24,6 +26,10 @@ import {
 const KEYS = {
   PROJECTS: 'graveyard_projects_v2',
   TEAMS: 'graveyard_teams_v2',
+  TEAM_TASKS: 'graveyard_team_tasks_v2',
+  TEAM_ACTIVITIES: 'graveyard_team_activities_v2',
+  TEAM_COMMENTS: 'graveyard_team_comments_v2',
+  TEAM_INVITATIONS: 'graveyard_team_invitations_v2',
   REMINDERS: 'graveyard_reminders_v2',
   NOTIFICATIONS: 'graveyard_notifications_v2',
   USER_PROFILE: 'graveyard_user_profile_v2',
@@ -34,16 +40,34 @@ const KEYS = {
   INITIALIZED: 'graveyard_initialized_v2',
 };
 
+export function normalizeProject(p: any): Project {
+  if (!p) return p;
+  return {
+    ...p,
+    languages: Array.isArray(p.languages) ? p.languages : [],
+    frameworks: Array.isArray(p.frameworks) ? p.frameworks : [],
+    libraries: Array.isArray(p.libraries) ? p.libraries : [],
+    technicalBlockers: Array.isArray(p.technicalBlockers) ? p.technicalBlockers : [],
+    milestones: Array.isArray(p.milestones) ? p.milestones : [],
+    completedFeatures: Array.isArray(p.completedFeatures) ? p.completedFeatures : [],
+    inProgressFeatures: Array.isArray(p.inProgressFeatures) ? p.inProgressFeatures : [],
+    plannedFeatures: Array.isArray(p.plannedFeatures) ? p.plannedFeatures : [],
+    teamMembers: Array.isArray(p.teamMembers) ? p.teamMembers : [],
+    timeline: Array.isArray(p.timeline) ? p.timeline : [],
+    progress: typeof p.progress === 'number' ? p.progress : 0,
+  };
+}
+
 export function calculateProjectProgress(project: Project): number {
   const allTasks: Task[] = [];
-  project.milestones.forEach((m) => {
-    if (m.tasks && m.tasks.length > 0) {
+  (project?.milestones || []).forEach((m) => {
+    if (m && m.tasks && m.tasks.length > 0) {
       allTasks.push(...m.tasks);
     }
   });
 
   if (allTasks.length === 0) {
-    return project.progress || 0;
+    return project?.progress || 0;
   }
 
   const totalWeight = allTasks.reduce((sum, t) => sum + (t.weight || 1), 0);
@@ -78,17 +102,19 @@ export const storageService = {
       const data = localStorage.getItem(KEYS.PROJECTS);
       if (!data) {
         this.saveProjects(INITIAL_PROJECTS);
-        return INITIAL_PROJECTS;
+        return INITIAL_PROJECTS.map(normalizeProject);
       }
-      return JSON.parse(data);
+      const list = JSON.parse(data);
+      return Array.isArray(list) ? list.map(normalizeProject) : INITIAL_PROJECTS.map(normalizeProject);
     } catch (e) {
       console.error('Failed to load projects:', e);
-      return INITIAL_PROJECTS;
+      return INITIAL_PROJECTS.map(normalizeProject);
     }
   },
 
   getProject(id: string): Project | undefined {
-    return this.getProjects().find((p) => p.id === id);
+    const p = this.getProjects().find((proj) => proj.id === id);
+    return p ? normalizeProject(p) : undefined;
   },
 
   saveProjects(projects: Project[]): void {
@@ -488,13 +514,28 @@ export const storageService = {
     }
   },
 
-  createTeam(name: string, description: string): Team {
+  createTeam(
+    nameOrData: string | { name: string; description?: string; avatar?: string; visibility?: TeamVisibility; categories?: string[]; joinPolicy?: TeamJoinPolicy },
+    legacyDescription?: string
+  ): Team {
     const teams = this.getTeams();
     const now = new Date().toISOString();
+
+    const name = typeof nameOrData === 'string' ? nameOrData : nameOrData.name;
+    const description = typeof nameOrData === 'string' ? (legacyDescription || '') : (nameOrData.description || '');
+    const avatar = typeof nameOrData === 'object' ? nameOrData.avatar : undefined;
+    const visibility = typeof nameOrData === 'object' && nameOrData.visibility ? nameOrData.visibility : 'discoverable';
+    const categories = typeof nameOrData === 'object' && nameOrData.categories ? nameOrData.categories : [];
+    const joinPolicy = typeof nameOrData === 'object' && nameOrData.joinPolicy ? nameOrData.joinPolicy : 'request-to-join';
+
     const newTeam: Team = {
       id: `team-${uuidv4().slice(0, 8)}`,
-      name,
-      description,
+      name: name.trim(),
+      description: description.trim(),
+      avatar,
+      visibility,
+      categories,
+      joinPolicy,
       ownerId: 'user-1',
       projectIds: [],
       members: [
@@ -502,12 +543,13 @@ export const storageService = {
           id: 'user-1',
           name: 'Alex Rivera',
           role: 'owner',
-          skills: ['Full Stack', 'Product'],
+          skills: ['Full Stack', 'Architecture'],
           availability: 'full-time',
           joinedAt: now,
         },
       ],
       joinRequests: [],
+      invitations: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -515,6 +557,70 @@ export const storageService = {
     teams.unshift(newTeam);
     this.saveTeams(teams);
     return newTeam;
+  },
+
+  updateTeam(id: string, updates: Partial<Team>): Team {
+    const teams = this.getTeams();
+    const idx = teams.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error('Team not found');
+
+    const updated = {
+      ...teams[idx],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    teams[idx] = updated;
+    this.saveTeams(teams);
+    return updated;
+  },
+
+  deleteTeam(id: string): void {
+    const teams = this.getTeams().filter((t) => t.id !== id);
+    this.saveTeams(teams);
+  },
+
+  transferTeamOwnership(teamId: string, newOwnerId: string): Team {
+    const teams = this.getTeams();
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) throw new Error('Team not found');
+
+    const newOwner = team.members.find((m) => m.id === newOwnerId);
+    if (!newOwner) throw new Error('Target must be a member of the team');
+
+    team.ownerId = newOwnerId;
+    team.members = team.members.map((m) => {
+      if (m.id === team.ownerId) return { ...m, role: 'admin' as const };
+      if (m.id === newOwnerId) return { ...m, role: 'owner' as const };
+      return m;
+    });
+    team.updatedAt = new Date().toISOString();
+    this.saveTeams(teams);
+    return team;
+  },
+
+  leaveTeam(teamId: string, userId: string = 'user-1'): Team {
+    const teams = this.getTeams();
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (team.ownerId === userId) {
+      throw new Error('Cannot leave team as sole owner');
+    }
+    team.members = team.members.filter((m) => m.id !== userId);
+    team.updatedAt = new Date().toISOString();
+    this.saveTeams(teams);
+    return team;
+  },
+
+  updateMemberRole(teamId: string, memberId: string, role: 'admin' | 'member'): Team {
+    const teams = this.getTeams();
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) throw new Error('Team not found');
+
+    team.members = team.members.map((m) => (m.id === memberId ? { ...m, role } : m));
+    team.updatedAt = new Date().toISOString();
+    this.saveTeams(teams);
+    return team;
   },
 
   approveJoinRequest(teamId: string, requestId: string): Team {
@@ -527,15 +633,17 @@ export const storageService = {
 
     req.status = 'approved';
     const now = new Date().toISOString();
-    team.members.push({
-      id: req.userId,
-      name: req.userName,
-      avatar: req.userAvatar,
-      role: 'member',
-      skills: req.skills,
-      availability: 'part-time',
-      joinedAt: now,
-    });
+    if (!team.members.some((m) => m.id === req.userId)) {
+      team.members.push({
+        id: req.userId,
+        name: req.userName,
+        avatar: req.userAvatar,
+        role: 'member',
+        skills: req.skills,
+        availability: 'part-time',
+        joinedAt: now,
+      });
+    }
     team.updatedAt = now;
 
     this.saveTeams(teams);

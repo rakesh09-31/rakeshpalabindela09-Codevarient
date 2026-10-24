@@ -203,7 +203,7 @@ function ProjectArtwork({
       {/* Bottom Technical Strip */}
       <div className="flex items-center justify-between relative z-10 pt-2 border-t border-black/5 dark:border-white/10 text-[10px] sm:text-[11px] font-mono text-[#57534E] dark:text-[#BDB5CC]">
         <span className="truncate max-w-[65%]">
-          {project.languages.concat(project.frameworks).slice(0, 3).join(' • ') || 'Prototype'}
+          {(project.languages || []).concat(project.frameworks || []).slice(0, 3).join(' • ') || 'Prototype'}
         </span>
         <span className="font-semibold uppercase tracking-wider">
           {project.status} • {project.progress}%
@@ -222,11 +222,33 @@ export function DashboardPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchParams] = useSearchParams();
-  const [viewMode, setViewMode] = useState<'carousel' | 'grid' | 'list' | 'canvas'>(() => {
-    return searchParams.get('mode') === 'canvas' || searchParams.get('canvas') === 'true'
-      ? 'canvas'
-      : 'carousel';
+  const [viewMode, setViewModeState] = useState<'carousel' | 'grid' | 'list' | 'canvas'>(() => {
+    const param = searchParams.get('mode');
+    if (param === 'canvas' || param === 'carousel' || param === 'grid' || param === 'list') {
+      return param;
+    }
+    if (searchParams.get('canvas') === 'true') {
+      return 'canvas';
+    }
+    try {
+      const saved = localStorage.getItem('graveyard_dashboard_view');
+      if (saved === 'canvas' || saved === 'carousel' || saved === 'grid' || saved === 'list') {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return 'canvas';
   });
+
+  const setViewMode = useCallback((mode: 'carousel' | 'grid' | 'list' | 'canvas') => {
+    setViewModeState(mode);
+    try {
+      localStorage.setItem('graveyard_dashboard_view', mode);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Continuous Circular Carousel State Machine
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -294,11 +316,11 @@ export function DashboardPage() {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches =
-          p.title.toLowerCase().includes(q) ||
-          p.summary.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q)) ||
-          p.languages.some((l) => l.toLowerCase().includes(q)) ||
-          p.category.toLowerCase().includes(q);
+          (p.title || '').toLowerCase().includes(q) ||
+          (p.summary || '').toLowerCase().includes(q) ||
+          (p.tags || []).some((t) => t.toLowerCase().includes(q)) ||
+          (p.languages || []).some((l) => l.toLowerCase().includes(q)) ||
+          (p.category || '').toLowerCase().includes(q);
         if (!matches) return false;
       }
       if (selectedStatus !== 'all') {
@@ -579,6 +601,19 @@ export function DashboardPage() {
     return list.slice(0, 4);
   }, [projects]);
 
+  // Distinct Module D: Real-time Project Completion Progress
+  const completionProjects = useMemo(() => {
+    return [...projects]
+      .sort((a, b) => b.progress - a.progress)
+      .slice(0, 4);
+  }, [projects]);
+
+  const averageCompletion = useMemo(() => {
+    if (projects.length === 0) return 0;
+    const total = projects.reduce((sum, p) => sum + p.progress, 0);
+    return Math.round(total / projects.length);
+  }, [projects]);
+
   // Five circular slots around safeIndex: offsets [-2, -1, 0, 1, 2]
   const circularSlots = useMemo(() => {
     const total = filteredProjects.length;
@@ -608,7 +643,7 @@ export function DashboardPage() {
       <div className="absolute top-1/3 -right-48 w-[600px] h-[600px] bg-gradient-to-b from-[#4568DC]/8 to-transparent blur-3xl pointer-events-none rounded-full" />
 
       {/* Distinct Surface Container framing entire dashboard */}
-      <div className="relative z-10 bg-[#FFFFFF]/95 dark:bg-[#0E0A16] border border-[#D8CFE6] dark:border-[#382B49] rounded-3xl hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-within:border-[#8B2FE8] dark:focus-within:border-[#C026D3] p-5 sm:p-7 md:p-9 shadow-[0_16px_48px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:hover:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:focus-within:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] space-y-10 transition-all duration-200">
+      <div className="relative z-10 bg-[#FFFFFF]/95 dark:bg-[#0E0A16] border border-[#D8CFE6] dark:border-[#382B49] rounded-3xl hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-within:border-[#8B2FE8] dark:focus-within:border-[#C026D3] p-5 sm:p-7 md:p-9 shadow-[0_16px_48px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:hover:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:focus-within:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] space-y-10 transition-[border-color,box-shadow] duration-200">
         {/* ================= 1. WELCOME HERO SECTION ================= */}
       <section className="relative z-10 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-subtle)] border border-[var(--color-border)] rounded-[var(--radius-xl)] p-6 md:p-8 shadow-[var(--shadow-card)] flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-colors">
         <div className="space-y-2 max-w-2xl">
@@ -664,64 +699,73 @@ export function DashboardPage() {
             label: 'Total projects',
             value: totalCount,
             note: 'recorded concepts',
-            accent: 'border-indigo-500/40',
+            accent: 'border-indigo-500/40 hover:border-indigo-500',
             icon: Archive,
             iconColor: 'text-indigo-400 bg-indigo-500/10',
+            route: '/projects?status=all',
           },
           {
             label: 'Active',
             value: activeCount,
             note: 'in development',
-            accent: 'border-cyan-500/40',
+            accent: 'border-cyan-500/40 hover:border-cyan-500',
             icon: Activity,
             iconColor: 'text-cyan-400 bg-cyan-500/10',
+            route: '/projects?status=active',
           },
           {
             label: 'Paused',
             value: pausedCount,
             note: 'on hold',
-            accent: 'border-amber-500/40',
+            accent: 'border-amber-500/40 hover:border-amber-500',
             icon: PauseCircle,
             iconColor: 'text-amber-400 bg-amber-500/10',
+            route: '/projects?status=paused',
           },
           {
             label: 'Completed',
             value: completedCount,
             note: 'shipped releases',
-            accent: 'border-emerald-500/40',
+            accent: 'border-emerald-500/40 hover:border-emerald-500',
             icon: CheckCircle2,
             iconColor: 'text-emerald-400 bg-emerald-500/10',
+            route: '/projects?status=completed',
           },
           {
             label: 'Ready to revive',
             value: readyToReviveCount,
             note: 'high readiness',
-            accent: 'border-fuchsia-500/40',
+            accent: 'border-fuchsia-500/40 hover:border-fuchsia-500',
             icon: Sparkles,
             iconColor: 'text-fuchsia-400 bg-fuchsia-500/10',
+            route: '/projects?status=revivable',
           },
         ].map((m) => {
           const MIcon = m.icon;
           return (
-            <div
+            <button
               key={m.label}
-              className={`bg-[var(--color-surface)] border border-[var(--color-border)] border-t-2 ${m.accent} rounded-[var(--radius-lg)] p-5 shadow-[var(--shadow-card)] transition-all hover:translate-y-[-1px] hover:shadow-md`}
+              type="button"
+              onClick={() => navigate(m.route)}
+              className={`text-left bg-[var(--color-surface)] border border-[var(--color-border)] border-t-2 ${m.accent} rounded-[var(--radius-lg)] p-5 shadow-[var(--shadow-card)] transition-all hover:translate-y-[-2px] hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]/40 group`}
+              aria-label={`View ${m.label} projects (${m.value})`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs sm:text-sm text-[var(--color-text-secondary)] font-medium block">
+                <span className="text-xs sm:text-sm text-[var(--color-text-secondary)] font-medium block group-hover:text-[var(--color-text)] transition-colors">
                   {m.label}
                 </span>
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center ${m.iconColor}`}>
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center ${m.iconColor} group-hover:scale-110 transition-transform`}>
                   <MIcon className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[var(--color-text)] font-display tracking-tight">
-                {m.value}
+              <div className="text-2xl sm:text-3xl font-bold text-[var(--color-text)] font-display tracking-tight flex items-baseline justify-between">
+                <span>{m.value}</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
               </div>
               <span className="text-xs text-[var(--color-text-muted)] mt-1 block font-mono">
                 {m.note}
               </span>
-            </div>
+            </button>
           );
         })}
       </section>
@@ -982,7 +1026,7 @@ export function DashboardPage() {
 
             {/* Continuous Circular Carousel Stage */}
             <div
-              className="relative w-full overflow-hidden py-3 select-none"
+              className="relative w-full overflow-hidden py-3 select-none min-h-[460px] sm:min-h-[420px] lg:min-h-[380px]"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
@@ -992,7 +1036,7 @@ export function DashboardPage() {
 
               {/* 5-Slot Virtual Track */}
               <div
-                className="flex items-center"
+                className="flex items-stretch min-h-[460px] sm:min-h-[420px] lg:min-h-[380px]"
                 style={{
                   transform: `translateX(calc(${baseTrackOffset}% + ${trackTranslation}%))`,
                   transition:
@@ -1017,11 +1061,7 @@ export function DashboardPage() {
                         marginRight: `${gapPct}%`,
                         flexShrink: 0,
                       }}
-                      className={`transition-all ${
-                        animDirection && !prefersReducedMotion
-                          ? 'duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]'
-                          : ''
-                      } ${
+                      className={`transition-opacity duration-200 ${
                         isCenter
                           ? 'scale-100 opacity-100 z-10'
                           : isFar
@@ -1064,7 +1104,7 @@ export function DashboardPage() {
                     >
                       {/* Glossy Card Container */}
                       <div
-                        className={`relative rounded-3xl border transition-all duration-200 overflow-hidden outline-none ${
+                        className={`relative rounded-3xl border transition-[border-color,box-shadow,background-color] duration-200 overflow-hidden outline-none h-full flex flex-col justify-between ${
                           isCenter
                             ? 'border-[#E8E2D6] dark:border-white/15 hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-visible:border-[#8B2FE8] dark:focus-visible:border-[#C026D3] hover:shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12),0_0_25px_rgba(139,47,232,0.2)] dark:hover:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.22)] focus-visible:shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12),0_0_25px_rgba(139,47,232,0.2)] dark:focus-visible:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.22)] focus-visible:ring-2 focus-visible:ring-[#8B2FE8]/40 dark:focus-visible:ring-[#C026D3]/40 bg-gradient-to-b from-[#FFFFFF] via-[#FAF8F5] to-[#F5F2ED] dark:from-[#241B33]/95 dark:via-[#1B1428]/95 dark:to-[#130E1F]/95 shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12)] dark:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.12)] ring-1 ring-black/5 dark:ring-white/10'
                             : 'border-[#E8E2D6]/60 dark:border-white/10 hover:border-[#8B2FE8]/60 dark:hover:border-[#C026D3]/60 focus-visible:border-[#8B2FE8]/70 dark:focus-visible:border-[#C026D3]/70 hover:shadow-[0_0_15px_rgba(139,47,232,0.12)] bg-[#FFFDF9]/80 dark:bg-[#1C1528]/80 shadow-sm'
@@ -1116,29 +1156,29 @@ export function DashboardPage() {
 
                             {/* Title */}
                             <h3
-                              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#1C1917] dark:text-[#F8F7FB] hover:text-[var(--color-brand)] transition-colors leading-tight"
+                              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#1C1917] dark:text-[#F8F7FB] hover:text-[var(--color-brand)] transition-colors leading-tight line-clamp-1 truncate shrink-0"
                               style={{ fontFamily: 'var(--font-display)' }}
                             >
                               {project.title}
                             </h3>
 
                             {/* Summary */}
-                            <p className="text-sm text-[#44403C] dark:text-[#E1DCE9] leading-relaxed line-clamp-3">
+                            <p className="text-sm text-[#44403C] dark:text-[#E1DCE9] leading-relaxed line-clamp-2 h-[2.6rem] overflow-hidden shrink-0">
                               {project.summary}
                             </p>
 
                             {/* Tech Ecosystem */}
-                            <div className="space-y-1">
+                            <div className="space-y-1 shrink-0">
                               <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-[#57534E] dark:text-[#BDB5CC]">
                                 Tech Ecosystem
                               </span>
-                              <div className="flex flex-wrap gap-1.5">
-                                {project.languages.concat(project.frameworks).slice(0, 4).map((tech) => (
+                              <div className="flex flex-wrap gap-1.5 h-[26px] overflow-hidden">
+                                {(project.languages || []).concat(project.frameworks || []).slice(0, 4).map((tech) => (
                                   <Badge key={tech} variant="tech" size="sm">
                                     {tech}
                                   </Badge>
                                 ))}
-                                {project.tools.slice(0, 2).map((t) => (
+                                {(project.tools || []).slice(0, 2).map((t) => (
                                   <span
                                     key={t}
                                     className="text-xs px-2 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-[#57534E] dark:text-[#BDB5CC] border border-black/5 dark:border-white/10 font-mono"
@@ -1150,7 +1190,7 @@ export function DashboardPage() {
                             </div>
 
                             {/* Progress Snapshot */}
-                            <div className="space-y-1.5 pt-1.5 border-t border-[#E8E2D6] dark:border-white/10">
+                            <div className="space-y-1.5 pt-1.5 border-t border-[#E8E2D6] dark:border-white/10 shrink-0">
                               <div className="flex items-center justify-between text-xs font-mono text-[#57534E] dark:text-[#BDB5CC]">
                                 <span>Weighted Progress</span>
                                 <span className="font-bold text-[#1C1917] dark:text-[#F8F7FB]">
@@ -1159,16 +1199,16 @@ export function DashboardPage() {
                               </div>
                               <ProgressBar value={project.progress} size="xs" />
                               <div className="flex items-center gap-3 text-xs font-mono text-[#57534E] dark:text-[#BDB5CC] pt-0.5">
-                                <span>{project.milestones.length} Milestones</span>
+                                <span>{project.milestones?.length || 0} Milestones</span>
                                 <span>•</span>
                                 <span>
-                                  {project.technicalBlockers.length === 0 ? (
+                                  {(project.technicalBlockers?.length || 0) === 0 ? (
                                     <span className="text-[var(--color-success)] inline-flex items-center gap-1 font-semibold">
                                       <CheckCircle2 className="w-3.5 h-3.5" /> 0 Blockers
                                     </span>
                                   ) : (
                                     <span className="text-[var(--color-warning)] inline-flex items-center gap-1 font-semibold">
-                                      {project.technicalBlockers.length} Blockers
+                                      {project.technicalBlockers?.length || 0} Blockers
                                     </span>
                                   )}
                                 </span>
@@ -1177,7 +1217,7 @@ export function DashboardPage() {
 
                             {/* Action Bar (Direct card click opens case file; secondary controls protected) */}
                             {isCenter && (
-                              <div className="flex flex-wrap items-center gap-3 pt-2">
+                              <div className="flex flex-wrap items-center gap-3 pt-2 shrink-0">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1297,7 +1337,7 @@ export function DashboardPage() {
                   </p>
 
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {project.languages.concat(project.frameworks).slice(0, 3).map((t) => (
+                    {(project.languages || []).concat(project.frameworks || []).slice(0, 3).map((t) => (
                       <span
                         key={t}
                         className="px-2 py-0.5 rounded-[var(--radius-sm)] text-[11px] font-mono border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)]"
@@ -1305,9 +1345,9 @@ export function DashboardPage() {
                         {t}
                       </span>
                     ))}
-                    {project.languages.concat(project.frameworks).length > 3 && (
+                    {(project.languages || []).concat(project.frameworks || []).length > 3 && (
                       <span className="text-[11px] text-[var(--color-text-muted)] self-center font-mono">
-                        +{project.languages.concat(project.frameworks).length - 3}
+                        +{(project.languages || []).concat(project.frameworks || []).length - 3}
                       </span>
                     )}
                   </div>
@@ -1323,7 +1363,7 @@ export function DashboardPage() {
 
                   <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] pt-1">
                     <span>
-                      {project.milestones.length} milestone{project.milestones.length === 1 ? '' : 's'}
+                      {project.milestones?.length || 0} milestone{(project.milestones?.length || 0) === 1 ? '' : 's'}
                     </span>
                     <span className="inline-flex items-center gap-1 font-semibold text-[var(--color-brand)] group-hover:translate-x-0.5 transition-transform text-xs">
                       Open case file <ArrowRight className="w-3.5 h-3.5" />
@@ -1432,7 +1472,7 @@ export function DashboardPage() {
                         <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-1 italic">
                           {p.whyStopped
                             ? `"${p.whyStopped}"`
-                            : `${p.progress}% completed • ${p.milestones.length} milestones reached`}
+                            : `${p.progress}% completed • ${p.milestones?.length || 0} milestones reached`}
                         </p>
                       </div>
 
@@ -1603,70 +1643,88 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Section D: AI Tools Shortcuts */}
+          {/* Section D: Project Completion Progress */}
           <div className="card flex flex-col justify-between">
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[var(--color-brand)]" />
-                <h3
-                  className="text-base font-bold text-[var(--color-text)] tracking-tight"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  AI tools
-                </h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-[var(--color-brand)]" />
+                  <h3
+                    className="text-base font-bold text-[var(--color-text)] tracking-tight"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
+                    Project completion progress
+                  </h3>
+                </div>
+                <span className="text-xs font-mono font-semibold text-[var(--color-brand)]">
+                  Avg {averageCompletion}%
+                </span>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)]">
-                Project-aware intelligence tools to diagnose and combine unfinished concepts.
+                Real-time milestone delivery and weighted progress across preserved initiatives.
               </p>
 
               <div className="space-y-2.5 pt-1">
-                <div
-                  onClick={() => navigate('/revival-studio')}
-                  className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-brand)]/50 transition-colors cursor-pointer group flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-[30px] h-[30px] rounded-[var(--radius-sm)] bg-[var(--color-brand-soft)] text-[var(--color-brand)] flex items-center justify-center shrink-0">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-[var(--color-text)] truncate group-hover:text-[var(--color-brand)]">
-                        Revival Studio
-                      </h4>
-                      <p className="text-[11px] text-[var(--color-text-secondary)] truncate">
-                        Blocker triage, modern stacks, and MVP roadmaps.
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all shrink-0" />
-                </div>
+                {completionProjects.map((cp) => {
+                  const taskCount = (cp.completedFeatures?.length || 0) + (cp.inProgressFeatures?.length || 0) + (cp.plannedFeatures?.length || 0);
+                  const milestoneCount = cp.milestones?.length || 0;
+                  return (
+                    <div
+                      key={cp.id}
+                      onClick={() => navigate(`/projects/${cp.id}`)}
+                      className="p-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-brand)]/50 hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer group flex flex-col gap-2"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/projects/${cp.id}`);
+                        }
+                      }}
+                      aria-label={`View ${cp.title}, ${cp.progress}% complete`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h4 className="text-xs font-bold text-[var(--color-text)] truncate group-hover:text-[var(--color-brand)] transition-colors">
+                            {cp.title}
+                          </h4>
+                          <Badge status={cp.status} size="sm" />
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs font-mono font-bold text-[var(--color-text)]">
+                            {cp.progress}%
+                          </span>
+                          <ArrowRight className="w-3 h-3 text-[var(--color-text-muted)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                      </div>
 
-                <div
-                  onClick={() => navigate('/fusion')}
-                  className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] hover:border-[var(--color-brand)]/50 transition-colors cursor-pointer group flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-[30px] h-[30px] rounded-[var(--radius-sm)] bg-[var(--color-brand-soft)] text-[var(--color-brand)] flex items-center justify-center shrink-0">
-                      <Merge className="w-4 h-4" />
+                      <ProgressBar value={cp.progress} size="xs" />
+
+                      <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-text-muted)]">
+                        <span>
+                          {milestoneCount} {milestoneCount === 1 ? 'milestone' : 'milestones'}
+                          {taskCount > 0 ? ` • ${taskCount} tasks` : ''}
+                        </span>
+                        <span className="text-[10px] text-[var(--color-text-secondary)]">
+                          {cp.category}
+                        </span>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-[var(--color-text)] truncate group-hover:text-[var(--color-brand)]">
-                        Project Fusion
-                      </h4>
-                      <p className="text-[11px] text-[var(--color-text-secondary)] truncate">
-                        Synthesize two projects into one unified vision.
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all shrink-0" />
-                </div>
+                  );
+                })}
               </div>
             </div>
 
             <div className="pt-4 mt-4 border-t border-[var(--color-border)] flex items-center justify-between">
-              <span className="text-xs text-[var(--color-text-muted)]">Autonomous synthesis</span>
-              <span className="text-xs font-mono text-[var(--color-brand)] font-semibold">
-                AI Ready
+              <span className="text-xs text-[var(--color-text-muted)]">
+                {projects.length} recorded projects
               </span>
+              <Link
+                to="/projects"
+                className="text-xs font-semibold text-[var(--color-brand)] hover:underline flex items-center gap-1"
+              >
+                View all in archive <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>

@@ -24,10 +24,10 @@ export const navItems = [
   { path: '/revival-studio', label: 'Revival Studio', icon: Sparkles, badge: 'AI' },
   { path: '/fusion', label: 'Project Fusion', icon: Merge, badge: 'AI' },
   { path: '/discover', label: 'Discover', icon: Globe },
-  { path: '/profile', label: 'Profile', icon: User },
   { path: '/teams', label: 'Teams', icon: Users },
   { path: '/reminders', label: 'Reminders', icon: Bell },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/profile', label: 'Profile', icon: User },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 

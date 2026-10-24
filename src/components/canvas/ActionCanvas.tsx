@@ -22,6 +22,8 @@ import {
   LayoutGrid,
   SlidersHorizontal,
   ArrowRight,
+  Play,
+  Pause,
 } from 'lucide-react';
 import { Project, ProjectStatus } from '../../types';
 import { useApp } from '../../contexts/AppContext';
@@ -77,8 +79,41 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
   const [animDirection, setAnimDirection] = useState<'next' | 'prev' | null>(null);
   const isAnimatingRef = useRef(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
   const showcaseContainerRef = useRef<HTMLDivElement>(null);
+
+  // Clean up all pending timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      if (navTimeoutRef.current) {
+        clearTimeout(navTimeoutRef.current);
+        navTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Autoplay State (~3s continuous rotating exhibit)
+  const [isAutoplayActive, setIsAutoplayActive] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isTabVisible, setIsTabVisible] = useState(true);
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Listen to tab visibility
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Responsive carousel dimensions
   const [windowWidth, setWindowWidth] = useState(() =>
@@ -186,6 +221,44 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
     return () => clearTimeout(timer);
   }, [animDirection, filteredProjects.length]);
 
+  // Continuous ~3-second automated rotation loop (<4s, smooth fast transition ~220ms)
+  useEffect(() => {
+    if (
+      !isAutoplayActive ||
+      isHovered ||
+      !isTabVisible ||
+      prefersReducedMotion ||
+      presentationMode !== 'showcase' ||
+      filteredProjects.length <= 1 ||
+      Boolean(activeDragProject) ||
+      Boolean(pickedUpProject) ||
+      Boolean(touchDraggingProject) ||
+      Boolean(stagedArchiveProject) ||
+      Boolean(stagedDeleteProject)
+    ) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      handleNext();
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [
+    isAutoplayActive,
+    isHovered,
+    isTabVisible,
+    prefersReducedMotion,
+    presentationMode,
+    filteredProjects.length,
+    activeDragProject,
+    pickedUpProject,
+    touchDraggingProject,
+    stagedArchiveProject,
+    stagedDeleteProject,
+    handleNext,
+  ]);
+
   // Keyboard navigation for carousel (ArrowLeft / ArrowRight)
   useEffect(() => {
     if (presentationMode !== 'showcase') return;
@@ -227,14 +300,21 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
     }
   };
 
-  // Synchronize thumbnail strip scroll position
+  // Synchronize thumbnail strip scroll position without bubbling to parent containers
   useEffect(() => {
     if (thumbnailStripRef.current && filteredProjects.length > 0) {
-      const activeThumb = thumbnailStripRef.current.querySelector(
+      const container = thumbnailStripRef.current;
+      const activeThumb = container.querySelector(
         `[data-thumb-index="${safeIndex}"]`
       ) as HTMLElement | null;
       if (activeThumb) {
-        activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        const thumbLeft = activeThumb.offsetLeft;
+        const thumbWidth = activeThumb.offsetWidth;
+        const containerWidth = container.offsetWidth;
+        container.scrollTo({
+          left: thumbLeft - containerWidth / 2 + thumbWidth / 2,
+          behavior: 'smooth',
+        });
       }
     }
   }, [safeIndex, filteredProjects.length]);
@@ -310,7 +390,8 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
       message: `Navigating to Revival Studio for "${p.title}"...`,
     });
     setPickedUpProject(null);
-    setTimeout(() => {
+    if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+    navTimeoutRef.current = setTimeout(() => {
       navigate(`/revival-studio?project=${p.id}`);
     }, 350);
   };
@@ -345,7 +426,8 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
       const p2Id = p.id;
       setStagedFuseP1(null);
       setPickedUpProject(null);
-      setTimeout(() => {
+      if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+      navTimeoutRef.current = setTimeout(() => {
         navigate(`/project-fusion?project1=${p1Id}&project2=${p2Id}`);
       }, 400);
     }
@@ -361,7 +443,8 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
       message: `Opening Case File dossier for "${p.title}"...`,
     });
     setPickedUpProject(null);
-    setTimeout(() => {
+    if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+    navTimeoutRef.current = setTimeout(() => {
       navigate(`/projects/${p.id}`);
     }, 250);
   };
@@ -615,7 +698,11 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
       </div>
 
       {/* ================= 2. DESIGNATED ACTION ZONES DOCK ================= */}
-      <div className="space-y-3">
+      <div
+        className="space-y-3"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-purple-400" />
@@ -842,7 +929,9 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
       {presentationMode === 'showcase' ? (
         <div
           ref={showcaseContainerRef}
-          className="relative rounded-3xl border transition-all duration-200 ease-out border-[#D8CFE6] dark:border-[#382B49] hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-within:border-[#8B2FE8] dark:focus-within:border-[#C026D3] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:hover:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:focus-within:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] p-5 sm:p-7 md:p-8 bg-[#FFFFFF]/95 dark:bg-[#0E0A16] shadow-xl space-y-6"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="relative rounded-3xl border border-[#D8CFE6] dark:border-[#382B49] hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-within:border-[#8B2FE8] dark:focus-within:border-[#C026D3] hover:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:hover:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_24px_rgba(139,47,232,0.12)] dark:focus-within:shadow-[0_24px_70px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.18)] p-5 sm:p-7 md:p-8 bg-[#FFFFFF]/95 dark:bg-[#0E0A16] shadow-xl space-y-6 transition-[border-color,box-shadow] duration-200"
         >
           {filteredProjects.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-[var(--color-surface-subtle)] dark:bg-[#17131F]/50 border border-dashed border-[var(--color-border)] dark:border-[#382B49]">
@@ -879,9 +968,35 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono text-[var(--color-text-muted)] hidden md:inline">
+                  <span className="text-[11px] font-mono text-[var(--color-text-muted)] hidden lg:inline">
                     Drag card upward into Action Zones
                   </span>
+
+                  {/* Pause / Play 3s Rotation Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAutoplayActive((prev) => !prev)}
+                    className={`px-2.5 py-1 rounded-xl border text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      isAutoplayActive
+                        ? 'border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20'
+                        : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                    }`}
+                    aria-label={isAutoplayActive ? 'Pause automated 3s rotation' : 'Resume automated 3s rotation'}
+                    title={isAutoplayActive ? 'Pause 3s rotation' : 'Resume 3s rotation'}
+                  >
+                    {isAutoplayActive ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5 text-purple-500" />
+                        <span className="hidden sm:inline">3s Rotating</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="hidden sm:inline">Rotation Paused</span>
+                      </>
+                    )}
+                  </button>
+
                   <button
                     type="button"
                     onClick={handlePrev}
@@ -903,14 +1018,14 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                 </div>
               </div>
 
-              {/* Virtual 5-Slot Carousel Stage */}
-              <div className="relative w-full overflow-hidden py-2 select-none">
+              {/* Virtual 5-Slot Carousel Stage with Guaranteed Stable Height Frame */}
+              <div className="relative w-full overflow-hidden py-1 select-none min-h-[460px] sm:min-h-[420px] lg:min-h-[380px]">
                 {/* Edge atmospheric fade masks */}
                 <div className="absolute left-0 top-0 bottom-0 w-12 z-20 pointer-events-none bg-gradient-to-r from-[#FFFFFF] dark:from-[#0E0A16] to-transparent opacity-60 hidden md:block" />
                 <div className="absolute right-0 top-0 bottom-0 w-12 z-20 pointer-events-none bg-gradient-to-l from-[#FFFFFF] dark:from-[#0E0A16] to-transparent opacity-60 hidden md:block" />
 
                 <div
-                  className="flex items-center"
+                  className="flex items-stretch min-h-[460px] sm:min-h-[420px] lg:min-h-[380px]"
                   style={{
                     transform: `translateX(calc(${baseTrackOffset}% + ${trackTranslation}%))`,
                     transition: animDirection
@@ -936,16 +1051,12 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                           marginRight: `${gapPct}%`,
                           flexShrink: 0,
                         }}
-                        className={`transition-all ${
-                          animDirection
-                            ? 'duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]'
-                            : ''
-                        } ${
+                        className={`transition-opacity duration-200 ${
                           isCenter
-                            ? 'scale-100 opacity-100 z-10'
+                            ? 'opacity-100 z-10'
                             : isFar
-                            ? 'opacity-0 pointer-events-none scale-75'
-                            : 'scale-[0.93] opacity-45 hover:opacity-75 cursor-pointer z-0'
+                            ? 'opacity-0 pointer-events-none'
+                            : 'opacity-40 hover:opacity-75 cursor-pointer z-0'
                         }`}
                         onMouseEnter={() => {
                           if (isLeftPeek) handleNeighborMouseEnter('prev');
@@ -969,15 +1080,15 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                           aria-label={`Project Slide: ${project.title}. Drag into an Action Zone, or press Space to pick up.`}
                           aria-grabbed={isDragging || isPickedUp}
                           data-project-id={project.id}
-                          className={`relative rounded-3xl border transition-all duration-200 overflow-hidden cursor-grab active:cursor-grabbing outline-none ${
+                          className={`relative rounded-3xl border transition-[border-color,box-shadow,background-color] duration-200 overflow-hidden cursor-grab active:cursor-grabbing outline-none h-full flex flex-col justify-between ${
                             isPickedUp
-                              ? 'border-[#8B2FE8] dark:border-[#C026D3] ring-2 ring-[#8B2FE8]/60 dark:ring-[#C026D3]/60 shadow-[0_0_32px_rgba(139,47,232,0.25)] scale-[1.01]'
+                              ? 'border-[#8B2FE8] dark:border-[#C026D3] ring-2 ring-[#8B2FE8]/60 dark:ring-[#C026D3]/60 shadow-[0_0_32px_rgba(139,47,232,0.25)]'
                               : isDragging
                               ? 'opacity-40 border-dashed border-[#8B2FE8] dark:border-[#C026D3]'
                               : isCenter
                               ? 'border-[#E8E2D6] dark:border-white/15 hover:border-[#8B2FE8] dark:hover:border-[#C026D3] focus-visible:border-[#8B2FE8] dark:focus-visible:border-[#C026D3] hover:shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12),0_0_25px_rgba(139,47,232,0.2)] dark:hover:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.22)] focus-visible:shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12),0_0_25px_rgba(139,47,232,0.2)] dark:focus-visible:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(192,38,211,0.22)] focus-visible:ring-2 focus-visible:ring-[#8B2FE8]/40 dark:focus-visible:ring-[#C026D3]/40 bg-gradient-to-b from-[#FFFFFF] via-[#FAF8F5] to-[#F5F2ED] dark:from-[#241B33]/95 dark:via-[#1B1428]/95 dark:to-[#130E1F]/95 shadow-[0_20px_50px_-12px_rgba(28,25,23,0.12)] dark:shadow-[0_22px_60px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(139,47,232,0.12)]'
                               : 'border-[#E8E2D6]/60 dark:border-white/10 hover:border-[#8B2FE8]/60 dark:hover:border-[#C026D3]/60 focus-visible:border-[#8B2FE8]/70 dark:focus-visible:border-[#C026D3]/70 hover:shadow-[0_0_15px_rgba(139,47,232,0.12)] bg-[#FFFDF9]/80 dark:bg-[#1C1528]/80 shadow-sm'
-                          } p-6 sm:p-8 md:p-9`}
+                          } p-5 sm:p-7 md:p-8`}
                         >
                           {/* Glossy Top Sheen Edge */}
                           <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 dark:via-white/25 to-transparent pointer-events-none" />
@@ -990,17 +1101,17 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                             </div>
                           )}
 
-                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-center h-full">
                             {/* Left Column: Project Cover / Generative Vector Artwork */}
-                            <div className="lg:col-span-5 w-full pointer-events-none">
+                            <div className="lg:col-span-5 w-full pointer-events-none flex flex-col justify-center">
                               <ProjectArtwork project={project} />
                             </div>
 
                             {/* Right Column: Project Narrative Dossier & Drag Affordances */}
-                            <div className="lg:col-span-7 space-y-4">
+                            <div className="lg:col-span-7 flex flex-col justify-between h-full space-y-3 min-h-0">
                               {/* Metadata & Drag Control Strip */}
-                              <div className="flex flex-wrap items-center justify-between gap-2.5">
-                                <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <Badge status={project.status} size="md" />
                                   <Badge variant="tech" size="sm">
                                     {project.category}
@@ -1012,7 +1123,7 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                                 </div>
 
                                 {/* Drag Grip Affordance & Pick-up Button */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0">
                                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 text-xs font-mono font-semibold">
                                     <GripVertical className="w-3.5 h-3.5 text-purple-500" />
                                     <span className="hidden sm:inline">Drag to Zone</span>
@@ -1037,31 +1148,35 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                                 </div>
                               </div>
 
-                              {/* Title */}
+                              {/* Title (Clamped to 1 line with fixed height) */}
                               <h3
-                                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#1C1917] dark:text-[#F8F7FB] leading-tight"
+                                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[#1C1917] dark:text-[#F8F7FB] leading-tight line-clamp-1 truncate shrink-0"
                                 style={{ fontFamily: 'var(--font-display)' }}
+                                title={project.title}
                               >
                                 {project.title}
                               </h3>
 
-                              {/* Summary */}
-                              <p className="text-sm text-[#44403C] dark:text-[#E1DCE9] leading-relaxed line-clamp-3">
+                              {/* Summary (Clamped to exactly 2 lines with reserved height) */}
+                              <p
+                                className="text-xs sm:text-sm text-[#44403C] dark:text-[#E1DCE9] leading-relaxed line-clamp-2 h-[2.6rem] overflow-hidden shrink-0"
+                                title={project.summary}
+                              >
                                 {project.summary || 'No summary recorded.'}
                               </p>
 
-                              {/* Tech Ecosystem */}
-                              <div className="space-y-1">
-                                <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-[#57534E] dark:text-[#BDB5CC]">
+                              {/* Tech Ecosystem (Fixed single line height with overflow-hidden) */}
+                              <div className="space-y-1 shrink-0">
+                                <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-[#57534E] dark:text-[#BDB5CC] block">
                                   Tech Ecosystem
                                 </span>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {project.languages.concat(project.frameworks).slice(0, 4).map((tech) => (
+                                <div className="flex flex-wrap items-center gap-1.5 h-[26px] overflow-hidden">
+                                  {(project.languages || []).concat(project.frameworks || []).slice(0, 4).map((tech) => (
                                     <Badge key={tech} variant="tech" size="sm">
                                       {tech}
                                     </Badge>
                                   ))}
-                                  {project.tools.slice(0, 2).map((t) => (
+                                  {(project.tools || []).slice(0, 2).map((t) => (
                                     <span
                                       key={t}
                                       className="text-xs px-2 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-[#57534E] dark:text-[#BDB5CC] border border-black/5 dark:border-white/10 font-mono"
@@ -1073,7 +1188,7 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                               </div>
 
                               {/* Progress Snapshot */}
-                              <div className="space-y-1.5 pt-1.5 border-t border-[#E8E2D6] dark:border-white/10">
+                              <div className="space-y-1.5 pt-1.5 border-t border-[#E8E2D6] dark:border-white/10 shrink-0">
                                 <div className="flex items-center justify-between text-xs font-mono text-[#57534E] dark:text-[#BDB5CC]">
                                   <span>Weighted Progress</span>
                                   <span className="font-bold text-[#1C1917] dark:text-[#F8F7FB]">
@@ -1082,16 +1197,16 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                                 </div>
                                 <ProgressBar value={project.progress} size="xs" />
                                 <div className="flex items-center gap-3 text-xs font-mono text-[#57534E] dark:text-[#BDB5CC] pt-0.5">
-                                  <span>{project.milestones.length} Milestones</span>
+                                  <span>{project.milestones?.length || 0} Milestones</span>
                                   <span>•</span>
                                   <span>
-                                    {project.technicalBlockers.length === 0 ? (
+                                    {(project.technicalBlockers?.length || 0) === 0 ? (
                                       <span className="text-[var(--color-success)] inline-flex items-center gap-1 font-semibold">
                                         <CheckCircle2 className="w-3.5 h-3.5" /> 0 Blockers
                                       </span>
                                     ) : (
                                       <span className="text-[var(--color-warning)] inline-flex items-center gap-1 font-semibold">
-                                        {project.technicalBlockers.length} Blockers
+                                        {project.technicalBlockers?.length || 0} {(project.technicalBlockers?.length || 0) === 1 ? 'Blocker' : 'Blockers'}
                                       </span>
                                     )}
                                   </span>
@@ -1099,7 +1214,7 @@ export function ActionCanvas({ onExitCanvas }: ActionCanvasProps) {
                               </div>
 
                               {/* Target Action Zones Guide */}
-                              <div className="pt-2 flex items-center justify-between text-xs font-mono text-[#57534E] dark:text-[#BDB5CC] border-t border-[#E8E2D6] dark:border-white/10">
+                              <div className="pt-1.5 flex items-center justify-between text-xs font-mono text-[#57534E] dark:text-[#BDB5CC] border-t border-[#E8E2D6] dark:border-white/10 shrink-0">
                                 <span className="text-[11px] truncate">
                                   Targets: <strong>Revive</strong> • <strong>Fuse</strong> • <strong>Inspect</strong> • <strong>Archive</strong> • <strong>Delete</strong>
                                 </span>

@@ -48,7 +48,7 @@ export function DraggableProjectCard({
     }
   };
 
-  const allTags = [...project.languages, ...project.frameworks].slice(0, 3);
+  const allTags = [...(project.languages || []), ...(project.frameworks || [])].slice(0, 3);
 
   return (
     <div

@@ -2,7 +2,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { dbManager } from './db.ts';
 import { aiService } from './aiService.ts';
-import type { Project, Team, Reminder } from '../src/types/index.ts';
+import type { Project, Reminder } from '../src/types/index.ts';
 import {
   validateEmail,
   validatePhone,
@@ -303,66 +303,415 @@ export function apiPlugin(): Plugin {
             }
           }
 
-          // ---------------- TEAMS ----------------
+          // ---------------- TEAMS & COLLABORATION ----------------
           // GET /api/teams
-          if (url === '/api/teams' && method === 'GET') {
-            const teams = dbManager.getTeams();
-            return sendJson(res, teams);
+          if (url.startsWith('/api/teams') && !url.includes('/join-requests') && !url.includes('/projects') && !url.includes('/tasks') && !url.includes('/activities') && !url.includes('/comments') && !url.includes('/analytics') && !url.includes('/invitations') && !url.includes('/transfer-ownership') && !url.includes('/leave') && !url.includes('/members') && method === 'GET') {
+            const urlObj = new URL(url, 'http://localhost');
+            const pathParts = urlObj.pathname.split('/').filter(Boolean); // ['api', 'teams', optional id]
+            if (pathParts.length === 2) {
+              const visibility = urlObj.searchParams.get('visibility') || undefined;
+              const category = urlObj.searchParams.get('category') || undefined;
+              const q = urlObj.searchParams.get('q') || undefined;
+              const mine = urlObj.searchParams.get('mine') === 'true';
+
+              let teams = dbManager.getTeams({ userId, visibility, category, query: q });
+              if (mine) {
+                teams = teams.filter((t) => t.ownerId === userId || (t.members && t.members.some((m) => m.id === userId)));
+              }
+              return sendJson(res, teams);
+            } else if (pathParts.length === 3) {
+              const teamId = pathParts[2];
+              const team = dbManager.getTeam(teamId, userId);
+              if (!team) return sendError(res, 'Team not found or access denied', 404);
+              return sendJson(res, team);
+            }
           }
 
           // POST /api/teams
           if (url === '/api/teams' && method === 'POST') {
-            const body = await parseJsonBody(req);
-            if (!body.name) return sendError(res, 'Team name is required', 400);
-            const now = new Date().toISOString();
-            const newTeam: Team = {
-              id: `team-${Date.now().toString(36)}`,
-              name: body.name.trim(),
-              description: body.description?.trim() || '',
-              ownerId: userId,
-              projectIds: body.projectIds || [],
-              members: [
-                {
-                  id: userId,
-                  name: 'Alex Rivera',
-                  role: 'owner',
-                  skills: ['Full Stack', 'Architecture'],
-                  availability: 'full-time',
-                  joinedAt: now,
-                },
-              ],
-              joinRequests: [],
-              createdAt: now,
-              updatedAt: now,
-            };
-            const created = dbManager.createTeam(newTeam);
-            return sendJson(res, created, 201);
+            try {
+              const body = await parseJsonBody(req);
+              if (!body.name || !body.name.trim()) {
+                return sendError(res, 'Team name is required', 400);
+              }
+              const created = dbManager.createTeam(body, userId);
+              return sendJson(res, created, 201);
+            } catch (err: any) {
+              return sendError(res, err.message, 400);
+            }
+          }
+
+          // PATCH /api/teams/:id
+          const teamPatchMatch = url.match(/^\/api\/teams\/([^/?]+)$/);
+          if (teamPatchMatch && method === 'PATCH') {
+            try {
+              const teamId = teamPatchMatch[1];
+              const body = await parseJsonBody(req);
+              const updated = dbManager.updateTeam(teamId, body, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : err.message.includes('not found') ? 404 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // DELETE /api/teams/:id
+          const teamDeleteMatch = url.match(/^\/api\/teams\/([^/?]+)$/);
+          if (teamDeleteMatch && method === 'DELETE') {
+            try {
+              const teamId = teamDeleteMatch[1];
+              dbManager.deleteTeam(teamId, userId);
+              return sendJson(res, { success: true });
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/transfer-ownership
+          const transferOwnershipMatch = url.match(/^\/api\/teams\/([^/]+)\/transfer-ownership$/);
+          if (transferOwnershipMatch && method === 'POST') {
+            try {
+              const teamId = transferOwnershipMatch[1];
+              const body = await parseJsonBody(req);
+              if (!body.newOwnerId) return sendError(res, 'newOwnerId is required', 400);
+              const updated = dbManager.transferTeamOwnership(teamId, body.newOwnerId, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/leave
+          const leaveTeamMatch = url.match(/^\/api\/teams\/([^/]+)\/leave$/);
+          if (leaveTeamMatch && method === 'POST') {
+            try {
+              const teamId = leaveTeamMatch[1];
+              const updated = dbManager.leaveTeam(teamId, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              return sendError(res, err.message, 400);
+            }
+          }
+
+          // POST /api/teams/:id/members/:memberId/role
+          const roleMatch = url.match(/^\/api\/teams\/([^/]+)\/members\/([^/]+)\/role$/);
+          if (roleMatch && method === 'POST') {
+            try {
+              const [, teamId, memberId] = roleMatch;
+              const body = await parseJsonBody(req);
+              if (!body.role || (body.role !== 'admin' && body.role !== 'member')) {
+                return sendError(res, 'Valid role (admin or member) is required', 400);
+              }
+              const updated = dbManager.updateMemberRole(teamId, memberId, body.role, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // DELETE /api/teams/:id/members/:memberId
+          const removeMemberMatch = url.match(/^\/api\/teams\/([^/]+)\/members\/([^/]+)$/);
+          if (removeMemberMatch && method === 'DELETE') {
+            try {
+              const [, teamId, memberId] = removeMemberMatch;
+              const updated = dbManager.removeTeamMember(teamId, memberId, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // GET /api/teams/:id/invitations
+          const teamInvitationsGetMatch = url.match(/^\/api\/teams\/([^/]+)\/invitations$/);
+          if (teamInvitationsGetMatch && method === 'GET') {
+            try {
+              const teamId = teamInvitationsGetMatch[1];
+              const invitations = dbManager.getTeamInvitations(teamId, userId);
+              return sendJson(res, invitations);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/invitations
+          const teamInvitationsPostMatch = url.match(/^\/api\/teams\/([^/]+)\/invitations$/);
+          if (teamInvitationsPostMatch && method === 'POST') {
+            try {
+              const teamId = teamInvitationsPostMatch[1];
+              const body = await parseJsonBody(req);
+              if (!body.inviteeIdentifier || !body.inviteeIdentifier.trim()) {
+                return sendError(res, 'inviteeIdentifier (email or username) is required', 400);
+              }
+              const result = dbManager.createTeamInvitation(
+                teamId,
+                body.inviteeIdentifier,
+                body.role || 'member',
+                userId,
+                body.message
+              );
+              return sendJson(res, result, 201);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // DELETE /api/teams/:id/invitations/:invId
+          const teamInvitationsDeleteMatch = url.match(/^\/api\/teams\/([^/]+)\/invitations\/([^/]+)$/);
+          if (teamInvitationsDeleteMatch && method === 'DELETE') {
+            try {
+              const [, , invId] = teamInvitationsDeleteMatch;
+              const cancelled = dbManager.cancelTeamInvitation(invId, userId);
+              return sendJson(res, cancelled);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // GET /api/user/invitations
+          if (url === '/api/user/invitations' && method === 'GET') {
+            try {
+              const profile = dbManager.getUserSocialProfile(userId);
+              const invitations = dbManager.getUserInvitations(userId, profile?.email);
+              return sendJson(res, invitations);
+            } catch (err: any) {
+              return sendError(res, err.message, 400);
+            }
+          }
+
+          // POST /api/invitations/:id/accept
+          const acceptInvMatch = url.match(/^\/api\/invitations\/([^/]+)\/accept$/);
+          if (acceptInvMatch && method === 'POST') {
+            try {
+              const invId = acceptInvMatch[1];
+              const result = dbManager.acceptTeamInvitation(invId, userId);
+              return sendJson(res, result);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/invitations/:id/decline
+          const declineInvMatch = url.match(/^\/api\/invitations\/([^/]+)\/decline$/);
+          if (declineInvMatch && method === 'POST') {
+            try {
+              const invId = declineInvMatch[1];
+              const result = dbManager.declineTeamInvitation(invId, userId);
+              return sendJson(res, result);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/join-requests
+          const joinRequestPostMatch = url.match(/^\/api\/teams\/([^/]+)\/join-requests$/);
+          if (joinRequestPostMatch && method === 'POST') {
+            try {
+              const teamId = joinRequestPostMatch[1];
+              const body = await parseJsonBody(req);
+              const user = dbManager.getUserSocialProfile(userId);
+              const newReq = dbManager.createJoinRequest(teamId, {
+                userId,
+                userName: user?.name || 'Anonymous User',
+                userAvatar: user?.avatar,
+                message: body.message || 'I would like to contribute to this team.',
+                skills: body.skills || user?.skills || [],
+              });
+              return sendJson(res, newReq, 201);
+            } catch (err: any) {
+              return sendError(res, err.message, 400);
+            }
           }
 
           // POST /api/teams/:id/join-requests/:reqId/approve
           const joinApproveMatch = url.match(/^\/api\/teams\/([^/]+)\/join-requests\/([^/]+)\/approve$/);
           if (joinApproveMatch && method === 'POST') {
-            const [, teamId, reqId] = joinApproveMatch;
-            const teams = dbManager.getTeams();
-            const team = teams.find((t) => t.id === teamId);
-            if (!team) return sendError(res, 'Team not found', 404);
-            const reqItem = team.joinRequests.find((r) => r.id === reqId);
-            if (!reqItem) return sendError(res, 'Join request not found', 404);
-            reqItem.status = 'approved';
-            team.members.push({
-              id: reqItem.userId,
-              name: reqItem.userName,
-              avatar: reqItem.userAvatar,
-              role: 'member',
-              skills: reqItem.skills,
-              availability: 'part-time',
-              joinedAt: new Date().toISOString(),
-            });
-            const updated = dbManager.updateTeam(teamId, {
-              members: team.members,
-              joinRequests: team.joinRequests,
-            });
-            return sendJson(res, updated);
+            try {
+              const [, teamId, reqId] = joinApproveMatch;
+              const updated = dbManager.approveJoinRequest(teamId, reqId, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/join-requests/:reqId/reject
+          const joinRejectMatch = url.match(/^\/api\/teams\/([^/]+)\/join-requests\/([^/]+)\/reject$/);
+          if (joinRejectMatch && method === 'POST') {
+            try {
+              const [, teamId, reqId] = joinRejectMatch;
+              const updated = dbManager.rejectJoinRequest(teamId, reqId, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/projects (share project)
+          const shareProjectMatch = url.match(/^\/api\/teams\/([^/]+)\/projects$/);
+          if (shareProjectMatch && method === 'POST') {
+            try {
+              const teamId = shareProjectMatch[1];
+              const body = await parseJsonBody(req);
+              if (!body.projectId) return sendError(res, 'projectId is required', 400);
+              const result = dbManager.shareProjectWithTeam(teamId, body.projectId, userId);
+              return sendJson(res, result);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // DELETE /api/teams/:id/projects/:projectId (unshare project)
+          const unshareProjectMatch = url.match(/^\/api\/teams\/([^/]+)\/projects\/([^/]+)$/);
+          if (unshareProjectMatch && method === 'DELETE') {
+            try {
+              const [, teamId, projectId] = unshareProjectMatch;
+              const result = dbManager.unshareProjectFromTeam(teamId, projectId, userId);
+              return sendJson(res, result);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // GET /api/teams/:id/tasks
+          const teamTasksGetMatch = url.match(/^\/api\/teams\/([^/]+)\/tasks$/);
+          if (teamTasksGetMatch && method === 'GET') {
+            try {
+              const teamId = teamTasksGetMatch[1];
+              const tasks = dbManager.getTeamTasks(teamId, userId);
+              return sendJson(res, tasks);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/tasks
+          const teamTasksPostMatch = url.match(/^\/api\/teams\/([^/]+)\/tasks$/);
+          if (teamTasksPostMatch && method === 'POST') {
+            try {
+              const teamId = teamTasksPostMatch[1];
+              const body = await parseJsonBody(req);
+              if (!body.title || !body.title.trim()) {
+                return sendError(res, 'Task title is required', 400);
+              }
+              const created = dbManager.createTeamTask({ ...body, teamId }, userId);
+              return sendJson(res, created, 201);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // PATCH /api/teams/:id/tasks/:taskId
+          const teamTasksPatchMatch = url.match(/^\/api\/teams\/([^/]+)\/tasks\/([^/]+)$/);
+          if (teamTasksPatchMatch && method === 'PATCH') {
+            try {
+              const [, , taskId] = teamTasksPatchMatch;
+              const body = await parseJsonBody(req);
+              const updated = dbManager.updateTeamTask(taskId, body, userId);
+              return sendJson(res, updated);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // DELETE /api/teams/:id/tasks/:taskId
+          const teamTasksDeleteMatch = url.match(/^\/api\/teams\/([^/]+)\/tasks\/([^/]+)$/);
+          if (teamTasksDeleteMatch && method === 'DELETE') {
+            try {
+              const [, , taskId] = teamTasksDeleteMatch;
+              dbManager.deleteTeamTask(taskId, userId);
+              return sendJson(res, { success: true });
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // GET /api/teams/:id/activities
+          const teamActivitiesGetMatch = url.match(/^\/api\/teams\/([^/]+)\/activities$/);
+          if (teamActivitiesGetMatch && method === 'GET') {
+            try {
+              const teamId = teamActivitiesGetMatch[1];
+              const activities = dbManager.getTeamActivities(teamId, userId);
+              return sendJson(res, activities);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // GET /api/teams/:id/comments
+          const teamCommentsGetMatch = url.match(/^\/api\/teams\/([^/?]+)\/comments/);
+          if (teamCommentsGetMatch && method === 'GET') {
+            try {
+              const teamId = teamCommentsGetMatch[1];
+              const urlObj = new URL(url, 'http://localhost');
+              const projectId = urlObj.searchParams.get('projectId') || undefined;
+              const taskId = urlObj.searchParams.get('taskId') || undefined;
+              const comments = dbManager.getTeamComments(teamId, { projectId, taskId }, userId);
+              return sendJson(res, comments);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // POST /api/teams/:id/comments
+          const teamCommentsPostMatch = url.match(/^\/api\/teams\/([^/]+)\/comments$/);
+          if (teamCommentsPostMatch && method === 'POST') {
+            try {
+              const teamId = teamCommentsPostMatch[1];
+              const body = await parseJsonBody(req);
+              if (!body.content || !body.content.trim()) {
+                return sendError(res, 'Comment content is required', 400);
+              }
+              const created = dbManager.createTeamComment({ ...body, teamId }, userId);
+              return sendJson(res, created, 201);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // DELETE /api/teams/:id/comments/:commentId
+          const teamCommentsDeleteMatch = url.match(/^\/api\/teams\/([^/]+)\/comments\/([^/]+)$/);
+          if (teamCommentsDeleteMatch && method === 'DELETE') {
+            try {
+              const [, , commentId] = teamCommentsDeleteMatch;
+              dbManager.deleteTeamComment(commentId, userId);
+              return sendJson(res, { success: true });
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
+          }
+
+          // GET /api/teams/:id/analytics
+          const teamAnalyticsGetMatch = url.match(/^\/api\/teams\/([^/]+)\/analytics$/);
+          if (teamAnalyticsGetMatch && method === 'GET') {
+            try {
+              const teamId = teamAnalyticsGetMatch[1];
+              const analytics = dbManager.getTeamAnalytics(teamId, userId);
+              return sendJson(res, analytics);
+            } catch (err: any) {
+              const status = err.message.includes('Forbidden') ? 403 : 400;
+              return sendError(res, err.message, status);
+            }
           }
 
           // ---------------- REMINDERS & FOLLOW-THROUGH CENTER ----------------

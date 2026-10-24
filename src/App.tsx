@@ -1,8 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
+import { ToastProvider } from './components/ui/Toast';
 import { AppLayout } from './components/layout/AppLayout';
-import { StartupScreen } from './components/common';
+import { StartupScreen, ErrorBoundary } from './components/common';
 
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -20,33 +21,163 @@ import { ProfilePage } from './pages/ProfilePage';
 
 export function App() {
   return (
-    <AppProvider>
-      <StartupScreen />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="projects/new" element={<ProjectFormPage />} />
-            <Route path="projects/:id/edit" element={<ProjectFormPage />} />
-            <Route path="projects/:id" element={<ProjectDetailPage />} />
-            <Route path="revival-studio" element={<RevivalStudioPage />} />
-            <Route path="fusion" element={<FusionPage />} />
-            <Route path="fusion/proposal/:proposalId" element={<FusionProposalPage />} />
-            <Route path="project-fusion" element={<FusionPage />} />
-            <Route path="project-fusion/proposal/:proposalId" element={<FusionProposalPage />} />
-            <Route path="discover" element={<DiscoverPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="profile/:id" element={<ProfilePage />} />
-            <Route path="teams" element={<TeamsPage />} />
-            <Route path="reminders" element={<RemindersPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </AppProvider>
+    <ErrorBoundary title="Project Graveyard encountered a startup issue">
+      <AppProvider>
+        <ToastProvider>
+          <StartupScreen />
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ErrorBoundary title="Application layout error">
+                    <AppLayout />
+                  </ErrorBoundary>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <ErrorBoundary title="Dashboard error">
+                      <DashboardPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="projects"
+                  element={
+                    <ErrorBoundary title="Projects page error">
+                      <ProjectsPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="projects/new"
+                  element={
+                    <ErrorBoundary title="New project editor error">
+                      <ProjectFormPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="projects/:id/edit"
+                  element={
+                    <ErrorBoundary title="Project editor error">
+                      <ProjectFormPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="projects/:id"
+                  element={
+                    <ErrorBoundary title="Project details error">
+                      <ProjectDetailPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="revival-studio"
+                  element={
+                    <ErrorBoundary title="Revival Studio error">
+                      <RevivalStudioPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="fusion"
+                  element={
+                    <ErrorBoundary title="Project Fusion error">
+                      <FusionPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="fusion/proposal/:proposalId"
+                  element={
+                    <ErrorBoundary title="Fusion Proposal error">
+                      <FusionProposalPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="project-fusion"
+                  element={
+                    <ErrorBoundary title="Project Fusion error">
+                      <FusionPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="project-fusion/proposal/:proposalId"
+                  element={
+                    <ErrorBoundary title="Fusion Proposal error">
+                      <FusionProposalPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="discover"
+                  element={
+                    <ErrorBoundary title="Discover community error">
+                      <DiscoverPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="profile"
+                  element={
+                    <ErrorBoundary title="Profile page error">
+                      <ProfilePage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="profile/:id"
+                  element={
+                    <ErrorBoundary title="Profile page error">
+                      <ProfilePage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="teams"
+                  element={
+                    <ErrorBoundary title="Teams workspace error">
+                      <TeamsPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="reminders"
+                  element={
+                    <ErrorBoundary title="Reminders page error">
+                      <RemindersPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="analytics"
+                  element={
+                    <ErrorBoundary title="Analytics page error">
+                      <AnalyticsPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <ErrorBoundary title="Settings page error">
+                      <SettingsPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ToastProvider>
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 

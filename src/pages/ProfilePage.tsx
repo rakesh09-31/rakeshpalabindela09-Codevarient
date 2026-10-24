@@ -810,7 +810,7 @@ function ProfileProjectCard({ project }: { project: Project }) {
 
         {/* Tech Stack Pills */}
         <div className="flex flex-wrap gap-1 mb-3">
-          {project.languages.concat(project.frameworks).slice(0, 3).map((item) => (
+          {(project.languages || []).concat(project.frameworks || []).slice(0, 3).map((item) => (
             <span
               key={item}
               className="px-2 py-0.5 rounded-[var(--radius-sm)] text-[10px] font-mono border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text-body)]"
@@ -818,9 +818,9 @@ function ProfileProjectCard({ project }: { project: Project }) {
               {item}
             </span>
           ))}
-          {project.languages.concat(project.frameworks).length > 3 && (
+          {(project.languages || []).concat(project.frameworks || []).length > 3 && (
             <span className="text-[10px] font-mono text-[var(--color-text-muted)] self-center">
-              +{project.languages.concat(project.frameworks).length - 3}
+              +{(project.languages || []).concat(project.frameworks || []).length - 3}
             </span>
           )}
         </div>

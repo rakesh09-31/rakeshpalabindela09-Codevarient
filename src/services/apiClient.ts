@@ -1,6 +1,14 @@
 import {
   Project,
   Team,
+  TeamVisibility,
+  TeamJoinPolicy,
+  TeamInvitation,
+  TeamTask,
+  TeamActivityEvent,
+  TeamComment,
+  TeamAnalytics,
+  JoinRequest,
   Reminder,
   ReminderMetrics,
   ReminderEvent,
@@ -168,15 +176,123 @@ export class ApiClient {
     );
   }
 
-  // ---------------- TEAMS ----------------
-  async getTeams(): Promise<Team[]> {
-    return this.request<Team[]>('/teams');
+  // ---------------- TEAMS & COLLABORATION ----------------
+  async getTeams(params?: { visibility?: string; category?: string; q?: string; mine?: boolean }): Promise<Team[]> {
+    let query = '';
+    if (params) {
+      const qp = new URLSearchParams();
+      if (params.visibility) qp.set('visibility', params.visibility);
+      if (params.category) qp.set('category', params.category);
+      if (params.q) qp.set('q', params.q);
+      if (params.mine) qp.set('mine', 'true');
+      const qs = qp.toString();
+      if (qs) query = `?${qs}`;
+    }
+    return this.request<Team[]>(`/teams${query}`);
   }
 
-  async createTeam(name: string, description: string): Promise<Team> {
+  async getTeam(id: string): Promise<Team> {
+    return this.request<Team>(`/teams/${id}`);
+  }
+
+  async createTeam(data: {
+    name: string;
+    description?: string;
+    avatar?: string;
+    visibility?: TeamVisibility;
+    categories?: string[];
+    joinPolicy?: TeamJoinPolicy;
+  }): Promise<Team> {
     return this.request<Team>('/teams', {
       method: 'POST',
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTeam(id: string, updates: Partial<Team>): Promise<Team> {
+    return this.request<Team>(`/teams/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteTeam(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/teams/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async transferTeamOwnership(teamId: string, newOwnerId: string): Promise<Team> {
+    return this.request<Team>(`/teams/${teamId}/transfer-ownership`, {
+      method: 'POST',
+      body: JSON.stringify({ newOwnerId }),
+    });
+  }
+
+  async leaveTeam(teamId: string): Promise<Team> {
+    return this.request<Team>(`/teams/${teamId}/leave`, {
+      method: 'POST',
+    });
+  }
+
+  async updateMemberRole(teamId: string, memberId: string, role: 'admin' | 'member'): Promise<Team> {
+    return this.request<Team>(`/teams/${teamId}/members/${memberId}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async removeMember(teamId: string, memberId: string): Promise<Team> {
+    return this.request<Team>(`/teams/${teamId}/members/${memberId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTeamInvitations(teamId: string): Promise<TeamInvitation[]> {
+    return this.request<TeamInvitation[]>(`/teams/${teamId}/invitations`);
+  }
+
+  async inviteMember(
+    teamId: string,
+    inviteeIdentifier: string,
+    role: 'admin' | 'member' = 'member',
+    message?: string
+  ): Promise<{ invitation: TeamInvitation; emailDelivery: { sent: boolean; reason: string } }> {
+    return this.request<{ invitation: TeamInvitation; emailDelivery: { sent: boolean; reason: string } }>(
+      `/teams/${teamId}/invitations`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ inviteeIdentifier, role, message }),
+      }
+    );
+  }
+
+  async cancelInvitation(teamId: string, invitationId: string): Promise<TeamInvitation> {
+    return this.request<TeamInvitation>(`/teams/${teamId}/invitations/${invitationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getUserInvitations(): Promise<TeamInvitation[]> {
+    return this.request<TeamInvitation[]>('/user/invitations');
+  }
+
+  async acceptInvitation(invitationId: string): Promise<{ team: Team; invitation: TeamInvitation }> {
+    return this.request<{ team: Team; invitation: TeamInvitation }>(`/invitations/${invitationId}/accept`, {
+      method: 'POST',
+    });
+  }
+
+  async declineInvitation(invitationId: string): Promise<TeamInvitation> {
+    return this.request<TeamInvitation>(`/invitations/${invitationId}/decline`, {
+      method: 'POST',
+    });
+  }
+
+  async submitJoinRequest(teamId: string, message: string, skills: string[]): Promise<JoinRequest> {
+    return this.request<JoinRequest>(`/teams/${teamId}/join-requests`, {
+      method: 'POST',
+      body: JSON.stringify({ message, skills }),
     });
   }
 
@@ -184,6 +300,81 @@ export class ApiClient {
     return this.request<Team>(`/teams/${teamId}/join-requests/${requestId}/approve`, {
       method: 'POST',
     });
+  }
+
+  async rejectJoinRequest(teamId: string, requestId: string): Promise<Team> {
+    return this.request<Team>(`/teams/${teamId}/join-requests/${requestId}/reject`, {
+      method: 'POST',
+    });
+  }
+
+  async shareProjectWithTeam(teamId: string, projectId: string): Promise<{ team: Team; project: Project }> {
+    return this.request<{ team: Team; project: Project }>(`/teams/${teamId}/projects`, {
+      method: 'POST',
+      body: JSON.stringify({ projectId }),
+    });
+  }
+
+  async unshareProjectFromTeam(teamId: string, projectId: string): Promise<{ team: Team; project: Project }> {
+    return this.request<{ team: Team; project: Project }>(`/teams/${teamId}/projects/${projectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTeamTasks(teamId: string): Promise<TeamTask[]> {
+    return this.request<TeamTask[]>(`/teams/${teamId}/tasks`);
+  }
+
+  async createTeamTask(data: Omit<TeamTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<TeamTask> {
+    return this.request<TeamTask>(`/teams/${data.teamId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTeamTask(teamId: string, taskId: string, updates: Partial<TeamTask>): Promise<TeamTask> {
+    return this.request<TeamTask>(`/teams/${teamId}/tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteTeamTask(teamId: string, taskId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/teams/${teamId}/tasks/${taskId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTeamActivities(teamId: string): Promise<TeamActivityEvent[]> {
+    return this.request<TeamActivityEvent[]>(`/teams/${teamId}/activities`);
+  }
+
+  async getTeamComments(teamId: string, options?: { projectId?: string; taskId?: string }): Promise<TeamComment[]> {
+    let query = '';
+    if (options?.projectId || options?.taskId) {
+      const qp = new URLSearchParams();
+      if (options.projectId) qp.set('projectId', options.projectId);
+      if (options.taskId) qp.set('taskId', options.taskId);
+      query = `?${qp.toString()}`;
+    }
+    return this.request<TeamComment[]>(`/teams/${teamId}/comments${query}`);
+  }
+
+  async createTeamComment(data: Omit<TeamComment, 'id' | 'createdAt' | 'updatedAt'>): Promise<TeamComment> {
+    return this.request<TeamComment>(`/teams/${data.teamId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTeamComment(teamId: string, commentId: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/teams/${teamId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTeamAnalytics(teamId: string): Promise<TeamAnalytics> {
+    return this.request<TeamAnalytics>(`/teams/${teamId}/analytics`);
   }
 
   // ---------------- REMINDERS ----------------

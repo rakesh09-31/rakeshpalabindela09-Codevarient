@@ -36,9 +36,17 @@ const typeIcons: Record<ToastType, React.ReactNode> = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+const fallbackToastContext: ToastContextValue = {
+  toast: (type: ToastType, message: string) => {
+    console.warn(`[useToast] Toast emitted outside ToastProvider (${type}):`, message);
+  },
+};
+
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within a ToastProvider');
+  if (!ctx) {
+    return fallbackToastContext;
+  }
   return ctx;
 }
 

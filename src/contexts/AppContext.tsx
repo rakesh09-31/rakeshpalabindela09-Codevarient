@@ -2,6 +2,14 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import {
   Project,
   Team,
+  TeamVisibility,
+  TeamJoinPolicy,
+  TeamInvitation,
+  TeamTask,
+  TeamActivityEvent,
+  TeamComment,
+  TeamAnalytics,
+  JoinRequest,
   Reminder,
   Notification,
   FusionProposal,
@@ -57,11 +65,27 @@ interface AppContextType {
   toggleTaskComplete: (projectId: string, milestoneId: string, taskId: string) => Project;
   deleteTask: (projectId: string, milestoneId: string, taskId: string) => Project;
 
-  // Teams
-  createTeam: (name: string, description: string) => Team;
-  approveJoinRequest: (teamId: string, requestId: string) => Team;
-  rejectJoinRequest: (teamId: string, requestId: string) => Team;
-  removeMember: (teamId: string, memberId: string) => Team;
+  // Teams & Collaboration
+  createTeam: (
+    dataOrName: string | { name: string; description?: string; avatar?: string; visibility?: TeamVisibility; categories?: string[]; joinPolicy?: TeamJoinPolicy },
+    legacyDesc?: string
+  ) => Promise<Team> | Team;
+  updateTeam: (id: string, updates: Partial<Team>) => Promise<Team>;
+  deleteTeam: (id: string) => Promise<void>;
+  transferTeamOwnership: (teamId: string, newOwnerId: string) => Promise<Team>;
+  leaveTeam: (teamId: string) => Promise<Team>;
+  updateMemberRole: (teamId: string, memberId: string, role: 'admin' | 'member') => Promise<Team>;
+  removeMember: (teamId: string, memberId: string) => Promise<Team> | Team;
+  inviteMember: (teamId: string, inviteeIdentifier: string, role?: 'admin' | 'member', message?: string) => Promise<{ invitation: TeamInvitation; emailDelivery: { sent: boolean; reason: string } }>;
+  cancelInvitation: (teamId: string, invitationId: string) => Promise<TeamInvitation>;
+  acceptInvitation: (invitationId: string) => Promise<{ team: Team; invitation: TeamInvitation }>;
+  declineInvitation: (invitationId: string) => Promise<TeamInvitation>;
+  submitJoinRequest: (teamId: string, message: string, skills: string[]) => Promise<JoinRequest>;
+  approveJoinRequest: (teamId: string, requestId: string) => Promise<Team> | Team;
+  rejectJoinRequest: (teamId: string, requestId: string) => Promise<Team> | Team;
+  shareProjectWithTeam: (teamId: string, projectId: string) => Promise<{ team: Team; project: Project }>;
+  unshareProjectFromTeam: (teamId: string, projectId: string) => Promise<{ team: Team; project: Project }>;
+  refreshTeams: () => Promise<void>;
 
   // Reminders
   createReminder: (data: Omit<Reminder, 'id' | 'createdAt' | 'status'>) => Reminder;
@@ -254,6 +278,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, []);
 
+  const refreshTeams = useCallback(async () => {
+    try {
+      const serverTeams = await apiClient.getTeams();
+      if (serverTeams) {
+        setTeams(serverTeams);
+        storageService.saveTeams(serverTeams);
+      }
+    } catch {
+      setTeams(storageService.getTeams());
+    }
+  }, []);
+
   const refreshAll = useCallback(() => {
     reloadAll();
   }, [reloadAll]);
@@ -362,31 +398,212 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return res;
   }, []);
 
-  // Teams
-  const createTeam = useCallback((name: string, description: string) => {
-    const res = storageService.createTeam(name, description);
-    setTeams(storageService.getTeams());
-    return res;
-  }, []);
+  // Teams & Collaboration
+  const createTeam = useCallback(
+    async (
+      dataOrName: string | { name: string; description?: string; avatar?: string; visibility?: TeamVisibility; categories?: string[]; joinPolicy?: TeamJoinPolicy },
+      legacyDesc?: string
+    ) => {
+      const payload = typeof dataOrName === 'string'
+        ? { name: dataOrName, description: legacyDesc || '' }
+        : dataOrName;
+      const localTeam = storageService.createTeam(payload);
+      setTeams(storageService.getTeams());
+      try {
+        const created = await apiClient.createTeam(payload);
+        if (created) {
+          await refreshTeams();
+          return created;
+        }
+      } catch (err) {
+        console.error('Server team creation error:', err);
+      }
+      return localTeam;
+    },
+    [refreshTeams]
+  );
 
-  const approveJoinRequest = useCallback((teamId: string, requestId: string) => {
-    const res = storageService.approveJoinRequest(teamId, requestId);
-    setTeams(storageService.getTeams());
-    setNotifications(storageService.getNotifications());
-    return res;
-  }, []);
+  const updateTeam = useCallback(
+    async (id: string, updates: Partial<Team>) => {
+      const localUpdated = storageService.updateTeam(id, updates);
+      setTeams(storageService.getTeams());
+      try {
+        const updated = await apiClient.updateTeam(id, updates);
+        if (updated) {
+          await refreshTeams();
+          return updated;
+        }
+      } catch (err) {
+        console.error('Server team update error:', err);
+      }
+      return localUpdated;
+    },
+    [refreshTeams]
+  );
 
-  const rejectJoinRequest = useCallback((teamId: string, requestId: string) => {
-    const res = storageService.rejectJoinRequest(teamId, requestId);
-    setTeams(storageService.getTeams());
-    return res;
-  }, []);
+  const deleteTeam = useCallback(
+    async (id: string) => {
+      storageService.deleteTeam(id);
+      setTeams(storageService.getTeams());
+      try {
+        await apiClient.deleteTeam(id);
+        await refreshTeams();
+      } catch (err) {
+        console.error('Server team delete error:', err);
+      }
+    },
+    [refreshTeams]
+  );
 
-  const removeMember = useCallback((teamId: string, memberId: string) => {
-    const res = storageService.removeMember(teamId, memberId);
-    setTeams(storageService.getTeams());
-    return res;
-  }, []);
+  const transferTeamOwnership = useCallback(
+    async (teamId: string, newOwnerId: string) => {
+      const localUpdated = storageService.transferTeamOwnership(teamId, newOwnerId);
+      setTeams(storageService.getTeams());
+      try {
+        const serverUpdated = await apiClient.transferTeamOwnership(teamId, newOwnerId);
+        if (serverUpdated) {
+          await refreshTeams();
+          return serverUpdated;
+        }
+      } catch (err) {
+        console.error('Server transfer ownership error:', err);
+      }
+      return localUpdated;
+    },
+    [refreshTeams]
+  );
+
+  const leaveTeam = useCallback(
+    async (teamId: string) => {
+      const localUpdated = storageService.leaveTeam(teamId);
+      setTeams(storageService.getTeams());
+      try {
+        const serverUpdated = await apiClient.leaveTeam(teamId);
+        if (serverUpdated) {
+          await refreshTeams();
+          return serverUpdated;
+        }
+      } catch (err) {
+        console.error('Server leave team error:', err);
+      }
+      return localUpdated;
+    },
+    [refreshTeams]
+  );
+
+  const updateMemberRole = useCallback(
+    async (teamId: string, memberId: string, role: 'admin' | 'member') => {
+      const localUpdated = storageService.updateMemberRole(teamId, memberId, role);
+      setTeams(storageService.getTeams());
+      try {
+        const serverUpdated = await apiClient.updateMemberRole(teamId, memberId, role);
+        if (serverUpdated) {
+          await refreshTeams();
+          return serverUpdated;
+        }
+      } catch (err) {
+        console.error('Server update member role error:', err);
+      }
+      return localUpdated;
+    },
+    [refreshTeams]
+  );
+
+  const removeMember = useCallback(
+    (teamId: string, memberId: string) => {
+      const res = storageService.removeMember(teamId, memberId);
+      setTeams(storageService.getTeams());
+      apiClient.removeMember(teamId, memberId).then(() => refreshTeams()).catch(() => {});
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const inviteMember = useCallback(
+    async (teamId: string, inviteeIdentifier: string, role: 'admin' | 'member' = 'member', message?: string) => {
+      const res = await apiClient.inviteMember(teamId, inviteeIdentifier, role, message);
+      await refreshTeams();
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const cancelInvitation = useCallback(
+    async (teamId: string, invitationId: string) => {
+      const res = await apiClient.cancelInvitation(teamId, invitationId);
+      await refreshTeams();
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const acceptInvitation = useCallback(
+    async (invitationId: string) => {
+      const res = await apiClient.acceptInvitation(invitationId);
+      await refreshTeams();
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const declineInvitation = useCallback(
+    async (invitationId: string) => {
+      const res = await apiClient.declineInvitation(invitationId);
+      await refreshTeams();
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const submitJoinRequest = useCallback(
+    async (teamId: string, message: string, skills: string[]) => {
+      const res = await apiClient.submitJoinRequest(teamId, message, skills);
+      await refreshTeams();
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const approveJoinRequest = useCallback(
+    (teamId: string, requestId: string) => {
+      const res = storageService.approveJoinRequest(teamId, requestId);
+      setTeams(storageService.getTeams());
+      setNotifications(storageService.getNotifications());
+      apiClient.approveJoinRequest(teamId, requestId).then(() => refreshTeams()).catch(() => {});
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const rejectJoinRequest = useCallback(
+    (teamId: string, requestId: string) => {
+      const res = storageService.rejectJoinRequest(teamId, requestId);
+      setTeams(storageService.getTeams());
+      apiClient.rejectJoinRequest(teamId, requestId).then(() => refreshTeams()).catch(() => {});
+      return res;
+    },
+    [refreshTeams]
+  );
+
+  const shareProjectWithTeam = useCallback(
+    async (teamId: string, projectId: string) => {
+      const res = await apiClient.shareProjectWithTeam(teamId, projectId);
+      await refreshTeams();
+      refreshProjects();
+      return res;
+    },
+    [refreshTeams, refreshProjects]
+  );
+
+  const unshareProjectFromTeam = useCallback(
+    async (teamId: string, projectId: string) => {
+      const res = await apiClient.unshareProjectFromTeam(teamId, projectId);
+      await refreshTeams();
+      refreshProjects();
+      return res;
+    },
+    [refreshTeams, refreshProjects]
+  );
 
   // Reminders
   const createReminder = useCallback(
@@ -694,9 +911,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toggleTaskComplete,
         deleteTask,
         createTeam,
+        updateTeam,
+        deleteTeam,
+        transferTeamOwnership,
+        leaveTeam,
+        updateMemberRole,
+        removeMember,
+        inviteMember,
+        cancelInvitation,
+        acceptInvitation,
+        declineInvitation,
+        submitJoinRequest,
         approveJoinRequest,
         rejectJoinRequest,
-        removeMember,
+        shareProjectWithTeam,
+        unshareProjectFromTeam,
+        refreshTeams,
         createReminder,
         updateReminder,
         cancelReminder,

@@ -21,9 +21,11 @@ import {
   Layers,
   Cpu,
   BookOpen,
+  Briefcase,
+  Mail,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { Project, UserSocialProfile } from '../types';
+import { Project, UserSocialProfile, Team } from '../types';
 import { Badge, Modal, Input, Textarea, Avatar, Button } from '../components/ui';
 
 // Fallback category artwork icons
@@ -42,6 +44,8 @@ export function DiscoverPage() {
     updateProject,
     userProfile,
     users,
+    teams,
+    submitJoinRequest,
     followUser,
     unfollowUser,
     collaborationRequests,
@@ -54,7 +58,7 @@ export function DiscoverPage() {
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
-  const [mainTab, setMainTab] = useState<'all' | 'people' | 'projects'>('all');
+  const [mainTab, setMainTab] = useState<'all' | 'people' | 'projects' | 'teams'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTech, setSelectedTech] = useState<string>('all');
 
@@ -64,6 +68,13 @@ export function DiscoverPage() {
   const [collaborateSkills, setCollaborateSkills] = useState('');
   const [sendingCollab, setSendingCollab] = useState(false);
   const [collabSuccess, setCollabSuccess] = useState(false);
+
+  // Team Join Request Modal state
+  const [teamToJoin, setTeamToJoin] = useState<Team | null>(null);
+  const [joinMessage, setJoinMessage] = useState('');
+  const [joinSkills, setJoinSkills] = useState('');
+  const [submittingJoin, setSubmittingJoin] = useState(false);
+  const [joinSuccess, setJoinSuccess] = useState(false);
 
   const [shareProject, setShareProject] = useState<Project | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -80,20 +91,30 @@ export function DiscoverPage() {
     return projects.filter((p) => p.visibility === 'public');
   }, [projects]);
 
+  // Discoverable teams (private teams are strictly excluded)
+  const discoverableTeams = useMemo(() => {
+    return teams.filter((t) => t.visibility === 'discoverable');
+  }, [teams]);
+
   // Derived categories & tech
   const categories = useMemo(() => {
     const set = new Set<string>();
     publicProjects.forEach((p) => {
       if (p.category) set.add(p.category);
     });
+    discoverableTeams.forEach((t) => {
+      if (t.categories) {
+        t.categories.forEach((c) => set.add(c));
+      }
+    });
     return Array.from(set).sort();
-  }, [publicProjects]);
+  }, [publicProjects, discoverableTeams]);
 
   const technologies = useMemo(() => {
     const set = new Set<string>();
     publicProjects.forEach((p) => {
-      p.languages.forEach((l) => set.add(l));
-      p.frameworks.forEach((f) => set.add(f));
+      (p.languages || []).forEach((l) => set.add(l));
+      (p.frameworks || []).forEach((f) => set.add(f));
     });
     return Array.from(set).sort();
   }, [publicProjects]);
@@ -111,18 +132,36 @@ export function DiscoverPage() {
     });
   }, [users, debouncedQuery]);
 
+  // Filtered Teams
+  const filteredTeams = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase();
+    return discoverableTeams.filter((t) => {
+      if (q) {
+        const matchName = t.name.toLowerCase().includes(q);
+        const matchDesc = (t.description || '').toLowerCase().includes(q);
+        const matchCats = t.categories && t.categories.some((c) => c.toLowerCase().includes(q));
+        if (!matchName && !matchDesc && !matchCats) return false;
+      }
+      if (selectedCategory !== 'all') {
+        const hasCat = t.categories && t.categories.includes(selectedCategory);
+        if (!hasCat) return false;
+      }
+      return true;
+    });
+  }, [discoverableTeams, debouncedQuery, selectedCategory]);
+
   // Filtered Projects
   const filteredProjects = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
     return publicProjects.filter((p) => {
       if (q) {
-        const matchesTitle = p.title.toLowerCase().includes(q);
-        const matchesSummary = p.summary.toLowerCase().includes(q);
-        const matchesTags = p.tags.some((t) => t.toLowerCase().includes(q));
+        const matchesTitle = (p.title || '').toLowerCase().includes(q);
+        const matchesSummary = (p.summary || '').toLowerCase().includes(q);
+        const matchesTags = (p.tags || []).some((t) => t.toLowerCase().includes(q));
         const matchesTech =
-          p.languages.some((l) => l.toLowerCase().includes(q)) ||
-          p.frameworks.some((f) => f.toLowerCase().includes(q));
-        const matchesCategory = p.category?.toLowerCase().includes(q);
+          (p.languages || []).some((l) => l.toLowerCase().includes(q)) ||
+          (p.frameworks || []).some((f) => f.toLowerCase().includes(q));
+        const matchesCategory = (p.category || '').toLowerCase().includes(q);
         const matchesOwner = (p.ownerName || '').toLowerCase().includes(q);
 
         if (!matchesTitle && !matchesSummary && !matchesTags && !matchesTech && !matchesCategory && !matchesOwner) {
@@ -134,8 +173,8 @@ export function DiscoverPage() {
       }
       if (
         selectedTech !== 'all' &&
-        !p.languages.includes(selectedTech) &&
-        !p.frameworks.includes(selectedTech)
+        !(p.languages || []).includes(selectedTech) &&
+        !(p.frameworks || []).includes(selectedTech)
       ) {
         return false;
       }
@@ -183,6 +222,30 @@ export function DiscoverPage() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleSubmitJoinTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamToJoin) return;
+    setSubmittingJoin(true);
+    try {
+      const skillsArr = joinSkills
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await submitJoinRequest(teamToJoin.id, joinMessage.trim(), skillsArr.length > 0 ? skillsArr : ['Contributor']);
+      setJoinSuccess(true);
+      setTimeout(() => {
+        setJoinSuccess(false);
+        setTeamToJoin(null);
+        setJoinMessage('');
+        setJoinSkills('');
+      }, 1600);
+    } catch (err) {
+      console.error('Failed to submit join request:', err);
+    } finally {
+      setSubmittingJoin(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       {/* Top Banner / Heading */}
@@ -202,13 +265,13 @@ export function DiscoverPage() {
             </div>
           </div>
           <p className="text-sm text-[var(--color-text-body)] mt-1.5 max-w-2xl leading-relaxed">
-            Search creators and public projects across the community. Connect with peers, inspect case files, and collaborate to revive viable concepts.
+            Search creators, public projects, and discoverable teams across the community. Connect with peers, inspect case files, and collaborate to revive viable concepts.
           </p>
         </div>
 
         <div className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-surface)] px-4 py-2.5 rounded-2xl border border-[var(--color-border)] shadow-xs flex items-center gap-2.5 self-start sm:self-center shrink-0">
           <Lock className="w-4 h-4 text-[#8B2FE8] shrink-0" />
-          <span>Private archives remain strictly isolated to project owners.</span>
+          <span>Private archives and private teams remain strictly isolated.</span>
         </div>
       </div>
 
@@ -221,7 +284,7 @@ export function DiscoverPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search people or projects by name, handle, topic, or tech…"
+            placeholder="Search people, projects, or teams by name, topic, or tech…"
             className="w-full h-[48px] pl-12 pr-10 text-sm md:text-base rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]/20 transition-all shadow-inner"
           />
           {searchQuery && (
@@ -235,22 +298,22 @@ export function DiscoverPage() {
           )}
         </div>
 
-        {/* Tab Toggle: All, People, Projects */}
+        {/* Tab Toggle: All, People, Projects, Teams */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-          <div className="flex items-center gap-1.5 bg-[var(--color-surface-subtle)] p-1 rounded-xl border border-[var(--color-border)] self-start">
+          <div className="flex items-center gap-1.5 bg-[var(--color-surface-subtle)] p-1 rounded-xl border border-[var(--color-border)] self-start overflow-x-auto max-w-full">
             <button
               onClick={() => setMainTab('all')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 mainTab === 'all'
                   ? 'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white shadow-xs'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
               }`}
             >
-              All Results ({filteredPeople.length + filteredProjects.length})
+              All Results ({filteredPeople.length + filteredProjects.length + filteredTeams.length})
             </button>
             <button
               onClick={() => setMainTab('people')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 mainTab === 'people'
                   ? 'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white shadow-xs'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
@@ -260,7 +323,7 @@ export function DiscoverPage() {
             </button>
             <button
               onClick={() => setMainTab('projects')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 mainTab === 'projects'
                   ? 'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white shadow-xs'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
@@ -268,10 +331,20 @@ export function DiscoverPage() {
             >
               <FolderOpen className="w-3.5 h-3.5" /> Projects ({filteredProjects.length})
             </button>
+            <button
+              onClick={() => setMainTab('teams')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                mainTab === 'teams'
+                  ? 'bg-gradient-to-r from-[#8B2FE8] to-[#C026D3] text-white shadow-xs'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" /> Teams ({filteredTeams.length})
+            </button>
           </div>
 
-          {/* Project Dropdown Filters (visible on 'all' or 'projects') */}
-          {(mainTab === 'all' || mainTab === 'projects') && (
+          {/* Project & Team Dropdown Filters */}
+          {(mainTab === 'all' || mainTab === 'projects' || mainTab === 'teams') && (
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={selectedCategory}
@@ -286,18 +359,20 @@ export function DiscoverPage() {
                 ))}
               </select>
 
-              <select
-                value={selectedTech}
-                onChange={(e) => setSelectedTech(e.target.value)}
-                className="h-[36px] text-xs px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] focus:outline-none cursor-pointer"
-              >
-                <option value="all">All Tech</option>
-                {technologies.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+              {mainTab !== 'teams' && (
+                <select
+                  value={selectedTech}
+                  onChange={(e) => setSelectedTech(e.target.value)}
+                  className="h-[36px] text-xs px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-text)] focus:outline-none cursor-pointer"
+                >
+                  <option value="all">All Tech</option>
+                  {technologies.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              )}
 
               {hasActiveFilters && (
                 <button
@@ -419,7 +494,69 @@ export function DiscoverPage() {
         </section>
       )}
 
-      {/* ================= 4. COLLABORATE PROPOSAL MODAL ================= */}
+      {/* ================= 4. DISCOVERABLE TEAMS SECTION ================= */}
+      {(mainTab === 'all' || mainTab === 'teams') && (
+        <section className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-[#8B2FE8]" />
+              <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text)] tracking-tight">
+                Discoverable Teams & Working Groups
+              </h2>
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)]">
+                {filteredTeams.length}
+              </span>
+            </div>
+            {mainTab === 'all' && filteredTeams.length > 3 && (
+              <button
+                onClick={() => setMainTab('teams')}
+                className="text-xs font-semibold text-[var(--color-brand)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                View all teams <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {filteredTeams.length === 0 ? (
+            <div className="bg-[var(--color-surface)] rounded-3xl border border-dashed border-[var(--color-border)] p-12 text-center space-y-3">
+              <Briefcase className="w-12 h-12 text-[var(--color-text-muted)] mx-auto opacity-50" />
+              <h3 className="text-base font-bold text-[var(--color-text)]">No discoverable teams matched your search</h3>
+              <p className="text-xs text-[var(--color-text-body)] max-w-md mx-auto leading-relaxed">
+                Teams marked as private do not appear here. Try adjusting your search query or selecting a different category.
+              </p>
+              {hasActiveFilters && (
+                <div className="pt-2">
+                  <Button variant="secondary" size="sm" onClick={clearFilters}>
+                    Reset all filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+              {(mainTab === 'all' ? filteredTeams.slice(0, 3) : filteredTeams).map((team) => {
+                const isMember = team.members.some((m) => m.id === currentUserId);
+                const hasPendingRequest = Boolean(
+                  team.joinRequests?.some((r) => r.userId === currentUserId && r.status === 'pending')
+                );
+
+                return (
+                  <DiscoverTeamCard
+                    key={team.id}
+                    team={team}
+                    isMember={isMember}
+                    hasPendingRequest={hasPendingRequest}
+                    onRequestJoin={() => setTeamToJoin(team)}
+                    onNavigate={() => navigate('/teams')}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ================= 5. COLLABORATE PROPOSAL MODAL ================= */}
       <Modal
         isOpen={Boolean(collaborateProject)}
         onClose={() => setCollaborateProject(null)}
@@ -498,13 +635,77 @@ export function DiscoverPage() {
 
           <div className="flex items-center gap-2 p-2 bg-[var(--color-input)] rounded-xl border border-[var(--color-border)]">
             <span className="text-xs text-[var(--color-text)] font-mono truncate flex-1 px-2 select-all">
-              {window.location.origin}/projects/{shareProject?.id}
+              {typeof window !== 'undefined' ? window.location.origin : ''}/projects/{shareProject?.id}
             </span>
             <Button size="sm" variant="primary" onClick={handleCopyShareLink} icon={copiedLink ? <Check className="w-3.5 h-3.5" /> : undefined}>
               {copiedLink ? 'Copied' : 'Copy'}
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* ================= TEAM JOIN REQUEST MODAL ================= */}
+      <Modal
+        isOpen={Boolean(teamToJoin)}
+        onClose={() => setTeamToJoin(null)}
+        title={`Request to Join "${teamToJoin?.name}"`}
+        size="md"
+      >
+        {joinSuccess ? (
+          <div className="py-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-[var(--color-success-soft)] text-[var(--color-success)] flex items-center justify-center mx-auto shadow-[0_0_16px_rgba(52,211,153,0.3)]">
+              <Check className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-bold text-[var(--color-text)]">Join Request Submitted!</h4>
+            <p className="text-xs text-[var(--color-text-body)] max-w-sm mx-auto leading-relaxed">
+              Your application has been delivered to the team admins. You will receive an in-app notification once reviewed.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmitJoinTeam} className="space-y-4">
+            <p className="text-xs text-[var(--color-text-body)] leading-relaxed">
+              Introduce yourself to the team leaders and share what technical or creative contributions you would like to offer.
+            </p>
+
+            <Input
+              label="Your Relevant Skills (comma-separated) *"
+              required
+              value={joinSkills}
+              onChange={(e) => setJoinSkills(e.target.value)}
+              placeholder="e.g. Fullstack TypeScript, UI Design, CI/CD"
+            />
+
+            <Textarea
+              label="Note to Team Admins *"
+              required
+              rows={3}
+              value={joinMessage}
+              onChange={(e) => setJoinMessage(e.target.value)}
+              placeholder="Hi team! I'm interested in helping revive your core services and collaborating on sprint goals..."
+            />
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-[var(--color-border)]">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setTeamToJoin(null)}
+                disabled={submittingJoin}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                icon={<Send className="w-3.5 h-3.5" />}
+                disabled={submittingJoin}
+              >
+                {submittingJoin ? 'Submitting...' : 'Send Join Request'}
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );
@@ -737,7 +938,7 @@ function DiscoverProjectCard({
 
         {/* Tech Stack Chips */}
         <div className="flex flex-wrap gap-1 mb-2">
-          {project.languages.concat(project.frameworks).slice(0, 3).map((item) => (
+          {(project.languages || []).concat(project.frameworks || []).slice(0, 3).map((item) => (
             <span
               key={item}
               className="px-2 py-0.5 rounded-[var(--radius-sm)] text-[10px] font-mono border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text-body)]"
@@ -745,9 +946,9 @@ function DiscoverProjectCard({
               {item}
             </span>
           ))}
-          {project.languages.concat(project.frameworks).length > 3 && (
+          {(project.languages || []).concat(project.frameworks || []).length > 3 && (
             <span className="text-[10px] font-mono text-[var(--color-text-muted)] self-center">
-              +{project.languages.concat(project.frameworks).length - 3}
+              +{(project.languages || []).concat(project.frameworks || []).length - 3}
             </span>
           )}
         </div>
@@ -796,6 +997,133 @@ function DiscoverProjectCard({
               icon={<Users className="w-3.5 h-3.5" />}
             >
               Collaborate
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DiscoverTeamCard({
+  team,
+  isMember,
+  hasPendingRequest,
+  onRequestJoin,
+  onNavigate,
+}: {
+  team: Team;
+  isMember: boolean;
+  hasPendingRequest: boolean;
+  onRequestJoin: () => void;
+  onNavigate: () => void;
+}) {
+  const isInvitationOnly = team.joinPolicy === 'invitation-only';
+
+  return (
+    <div
+      onClick={onNavigate}
+      className="card card-clickable min-h-[220px] p-5 rounded-2xl flex flex-col justify-between group transition-all duration-200 hover:-translate-y-1 relative"
+    >
+      <div>
+        {/* Top: Avatar/Icon + Name + Policy Badge */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-2xl p-[2px] bg-gradient-to-tr from-[#8B2FE8] to-[#06B6D4] shrink-0">
+              <div className="w-full h-full rounded-[14px] overflow-hidden bg-[var(--color-surface)] flex items-center justify-center font-bold text-sm text-[var(--color-text)]">
+                {team.avatar ? (
+                  <img src={team.avatar} alt={team.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{team.name.slice(0, 2).toUpperCase()}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-brand)] truncate transition-colors">
+                {team.name}
+              </h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs font-mono text-[var(--color-text-secondary)]">
+                  {team.members.length} {team.members.length === 1 ? 'member' : 'members'}
+                </span>
+                <span className="text-[var(--color-border)]">•</span>
+                <span className="text-xs font-mono text-[var(--color-text-secondary)]">
+                  {team.projectIds.length} {team.projectIds.length === 1 ? 'project' : 'projects'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Join Policy Badge */}
+          <span
+            className={`text-[10px] font-mono px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1 ${
+              isInvitationOnly
+                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+            }`}
+          >
+            {isInvitationOnly ? (
+              <>
+                <Mail className="w-3 h-3" />
+                Invitation Only
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-3 h-3" />
+                Request to Join
+              </>
+            )}
+          </span>
+        </div>
+
+        {/* Description */}
+        <p className="text-xs text-[var(--color-text-body)] line-clamp-2 leading-relaxed mb-3">
+          {team.description || 'Collaborative team working across shared projects.'}
+        </p>
+
+        {/* Category Pills */}
+        {team.categories && team.categories.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {team.categories.slice(0, 3).map((c) => (
+              <span
+                key={c}
+                className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] border border-[var(--color-border)]"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer: Member / Status / Request Button */}
+      <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between gap-3">
+        <span className="text-[11px] font-mono text-[var(--color-text-secondary)]">
+          Visibility: <span className="text-[var(--color-text)] font-semibold">Discoverable</span>
+        </span>
+
+        <div onClick={(e) => e.stopPropagation()}>
+          {isMember ? (
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-[#10B981]/15 text-[#34D399] border border-[#10B981]/30 flex items-center gap-1">
+              <UserCheck className="w-3.5 h-3.5" /> Member
+            </span>
+          ) : hasPendingRequest ? (
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-[#F59E0B]/15 text-[#FBBF24] border border-[#F59E0B]/30 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" /> Request Pending
+            </span>
+          ) : isInvitationOnly ? (
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-[var(--color-surface-subtle)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
+              Invite Only
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onRequestJoin}
+              icon={<UserPlus className="w-3.5 h-3.5" />}
+            >
+              Request to Join
             </Button>
           )}
         </div>

@@ -182,7 +182,7 @@ function ProjectArtwork({
       {/* Bottom Technical Strip */}
       <div className="flex items-center justify-between relative z-10 pt-2 border-t border-black/5 dark:border-white/10 text-[11px] font-mono text-[#594E6B] dark:text-[#BDB5CC]">
         <span className="truncate max-w-[65%]">
-          {project.languages.concat(project.frameworks).slice(0, 3).join(' • ') || 'Prototype'}
+          {(project.languages || []).concat(project.frameworks || []).slice(0, 3).join(' • ') || 'Prototype'}
         </span>
         <span className="font-semibold uppercase tracking-wider text-[10px]">
           {project.status} • {project.progress}%
@@ -205,11 +205,23 @@ export function ProjectsPage() {
 
   // Search & filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>(searchParams.get('status') || 'all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTech, setSelectedTech] = useState<string>('all');
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'title' | 'progress' | 'created'>('recent');
+
+  // Synchronize when searchParams changes (e.g. navigation from Dashboard metrics)
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      setSelectedStatus(statusParam);
+    }
+    const searchParam = searchParams.get('search');
+    if (searchParam !== null) {
+      setSearchQuery(searchParam);
+    }
+  }, [searchParams]);
 
   // Featured slide index
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -230,8 +242,8 @@ export function ProjectsPage() {
   const technologies = useMemo(() => {
     const set = new Set<string>();
     projects.forEach((p) => {
-      p.languages.forEach((l) => set.add(l));
-      p.frameworks.forEach((f) => set.add(f));
+      (p.languages || []).forEach((l) => set.add(l));
+      (p.frameworks || []).forEach((f) => set.add(f));
     });
     return Array.from(set);
   }, [projects]);
@@ -243,20 +255,32 @@ export function ProjectsPage() {
         // Search
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
-          const matchTitle = project.title.toLowerCase().includes(q);
-          const matchSummary = project.summary.toLowerCase().includes(q);
-          const matchCategory = project.category.toLowerCase().includes(q);
+          const matchTitle = (project.title || '').toLowerCase().includes(q);
+          const matchSummary = (project.summary || '').toLowerCase().includes(q);
+          const matchCategory = (project.category || '').toLowerCase().includes(q);
           const matchTech =
-            project.languages.some((l) => l.toLowerCase().includes(q)) ||
-            project.frameworks.some((f) => f.toLowerCase().includes(q));
-          const matchTags = project.tags.some((t) => t.toLowerCase().includes(q));
+            (project.languages || []).some((l) => l.toLowerCase().includes(q)) ||
+            (project.frameworks || []).some((f) => f.toLowerCase().includes(q));
+          const matchTags = (project.tags || []).some((t) => t.toLowerCase().includes(q));
           if (!matchTitle && !matchSummary && !matchCategory && !matchTech && !matchTags) {
             return false;
           }
         }
         // Status
-        if (selectedStatus !== 'all' && project.status !== selectedStatus) {
-          return false;
+        if (selectedStatus !== 'all') {
+          if (selectedStatus === 'active') {
+            if (project.status !== 'active' && project.status !== 'revived') {
+              return false;
+            }
+          } else if (selectedStatus === 'revivable') {
+            const isPaused = project.status === 'paused' || project.status === 'abandoned';
+            const score = 50 + Math.round((project.progress || 0) * 0.3) - (project.technicalBlockers?.length || 0) * 15;
+            if (!isPaused || score < 40) {
+              return false;
+            }
+          } else if (project.status !== selectedStatus) {
+            return false;
+          }
         }
         // Category
         if (selectedCategory !== 'all' && project.category !== selectedCategory) {
@@ -265,8 +289,8 @@ export function ProjectsPage() {
         // Tech
         if (
           selectedTech !== 'all' &&
-          !project.languages.includes(selectedTech) &&
-          !project.frameworks.includes(selectedTech)
+          !(project.languages || []).includes(selectedTech) &&
+          !(project.frameworks || []).includes(selectedTech)
         ) {
           return false;
         }
@@ -347,6 +371,7 @@ export function ProjectsPage() {
     setSelectedCategory('all');
     setSelectedTech('all');
     setBookmarkedOnly(false);
+    navigate({ search: '' }, { replace: true });
   };
 
   const formatPlantedDate = (isoString?: string) => {
@@ -453,14 +478,21 @@ export function ProjectsPage() {
 
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              const next = new URLSearchParams(searchParams);
+              if (e.target.value === 'all') next.delete('status');
+              else next.set('status', e.target.value);
+              navigate({ search: next.toString() }, { replace: true });
+            }}
             className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[var(--color-text)] focus:outline-none cursor-pointer"
           >
             <option value="all">All statuses</option>
             <option value="active">Active</option>
             <option value="paused">Paused</option>
-            <option value="abandoned">Abandoned</option>
             <option value="completed">Completed</option>
+            <option value="revivable">Ready to revive</option>
+            <option value="abandoned">Abandoned</option>
             <option value="archived">Archived</option>
             <option value="revived">Revived</option>
           </select>
@@ -500,6 +532,29 @@ export function ProjectsPage() {
             </button>
           )}
         </div>
+
+        {/* Active Filter Pill */}
+        {selectedStatus !== 'all' && (
+          <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border)]/40">
+            <span className="text-xs text-[var(--color-text-muted)] font-mono">Active filter:</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-xs font-mono font-medium">
+              <span>Status: <strong>{selectedStatus === 'revivable' ? 'Ready to revive' : selectedStatus}</strong> ({filteredProjects.length})</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStatus('all');
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('status');
+                  navigate({ search: next.toString() }, { replace: true });
+                }}
+                className="hover:text-purple-900 dark:hover:text-white cursor-pointer ml-1"
+                aria-label="Clear status filter"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ================= SECTION 1: FEATURED SLIDE SHOWCASE ================= */}
@@ -641,12 +696,12 @@ export function ProjectsPage() {
                         Tech Ecosystem
                       </span>
                       <div className="flex flex-wrap gap-1.5">
-                        {featuredProject.languages.concat(featuredProject.frameworks).map((tech) => (
+                        {(featuredProject.languages || []).concat(featuredProject.frameworks || []).map((tech) => (
                           <Badge key={tech} variant="tech" size="sm">
                             {tech}
                           </Badge>
                         ))}
-                        {featuredProject.tools.slice(0, 2).map((t) => (
+                        {(featuredProject.tools || []).slice(0, 2).map((t) => (
                           <span
                             key={t}
                             className="text-xs px-2.5 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-[#78716C] dark:text-[#BDB5CC] border border-black/5 dark:border-white/10 font-mono"
@@ -667,16 +722,16 @@ export function ProjectsPage() {
                       </div>
                       <ProgressBar value={featuredProject.progress} size="sm" />
                       <div className="flex items-center gap-4 text-xs font-mono text-[#78716C] dark:text-[#BDB5CC] pt-1">
-                        <span>{featuredProject.milestones.length} Milestones</span>
+                        <span>{featuredProject.milestones?.length || 0} Milestones</span>
                         <span>•</span>
                         <span>
-                          {featuredProject.technicalBlockers.length === 0 ? (
+                          {(featuredProject.technicalBlockers?.length || 0) === 0 ? (
                             <span className="text-[var(--color-success)] inline-flex items-center gap-1 font-semibold">
                               <CheckCircle2 className="w-3.5 h-3.5" /> 0 Blockers
                             </span>
                           ) : (
                             <span className="text-[var(--color-status-paused)] font-semibold">
-                              {featuredProject.technicalBlockers.length} Active Blockers
+                              {featuredProject.technicalBlockers?.length || 0} Active Blockers
                             </span>
                           )}
                         </span>
@@ -856,11 +911,11 @@ export function ProjectsPage() {
                         <span>{project.category}</span>
                         <span>•</span>
                         <span>Planted {formatPlantedDate(project.startDate)}</span>
-                        {project.languages.length > 0 && (
+                        {(project.languages?.length || 0) > 0 && (
                           <>
                             <span className="hidden sm:inline">•</span>
                             <span className="hidden sm:inline">
-                              {project.languages.slice(0, 2).join(', ')}
+                              {(project.languages || []).slice(0, 2).join(', ')}
                             </span>
                           </>
                         )}

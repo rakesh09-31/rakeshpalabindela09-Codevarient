@@ -35,23 +35,24 @@ export function AnalyticsPage() {
 
     const avgProgress = total > 0 ? Math.round(projects.reduce((acc, p) => acc + p.progress, 0) / total) : 0;
 
-    const totalTasks = projects.flatMap((p) => p.milestones.flatMap((m) => m.tasks)).length;
+    const totalTasks = projects.flatMap((p) => (p.milestones || []).flatMap((m) => m.tasks || [])).length;
     const completedTasks = projects
-      .flatMap((p) => p.milestones.flatMap((m) => m.tasks))
+      .flatMap((p) => (p.milestones || []).flatMap((m) => m.tasks || []))
       .filter((t) => t.status === 'completed').length;
 
-    const totalBlockers = projects.reduce((acc, p) => acc + p.technicalBlockers.length, 0);
+    const totalBlockers = projects.reduce((acc, p) => acc + (p.technicalBlockers?.length || 0), 0);
 
     // Categories breakdown
     const catMap: Record<string, number> = {};
     projects.forEach((p) => {
-      catMap[p.category] = (catMap[p.category] || 0) + 1;
+      const cat = p.category || 'General';
+      catMap[cat] = (catMap[cat] || 0) + 1;
     });
 
     // Tech breakdown
     const techMap: Record<string, number> = {};
     projects.forEach((p) => {
-      p.languages.concat(p.frameworks).forEach((t) => {
+      (p.languages || []).concat(p.frameworks || []).forEach((t) => {
         techMap[t] = (techMap[t] || 0) + 1;
       });
     });
@@ -63,7 +64,8 @@ export function AnalyticsPage() {
     // Revival Readiness Leaderboard
     const readinessList = projects
       .map((p) => {
-        let score = 50 + Math.round(p.progress * 0.3) - p.technicalBlockers.length * 15;
+        const blockerCount = p.technicalBlockers?.length || 0;
+        let score = 50 + Math.round((p.progress || 0) * 0.3) - blockerCount * 15;
         score = Math.max(15, Math.min(95, score));
         return {
           project: p,
@@ -71,7 +73,7 @@ export function AnalyticsPage() {
           recommendation:
             score >= 70
               ? 'Ready to revive via Continue'
-              : p.technicalBlockers.length > 0
+              : blockerCount > 0
               ? 'Resolve single blocker to resume'
               : 'Consider AI Project Fusion',
         };
@@ -308,10 +310,10 @@ export function AnalyticsPage() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={projects.map((p) => {
-                const readiness = Math.max(15, Math.min(95, 50 + Math.round(p.progress * 0.3) - p.technicalBlockers.length * 15));
+                const readiness = Math.max(15, Math.min(95, 50 + Math.round((p.progress || 0) * 0.3) - (p.technicalBlockers?.length || 0) * 15));
                 return {
-                  name: p.title.length > 12 ? `${p.title.slice(0, 11)}…` : p.title,
-                  progress: p.progress,
+                  name: (p.title || '').length > 12 ? `${(p.title || '').slice(0, 11)}…` : (p.title || 'Untitled'),
+                  progress: p.progress || 0,
                   readiness,
                 };
               })}

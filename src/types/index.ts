@@ -37,6 +37,7 @@ export interface TimelineEvent {
 export interface TeamMember {
   id: string;
   name: string;
+  email?: string;
   avatar?: string;
   role: 'owner' | 'admin' | 'member' | 'viewer';
   skills: string[];
@@ -115,17 +116,142 @@ export interface Project {
   ownerAvatar?: string;
 }
 
+export type TeamVisibility = 'private' | 'discoverable';
+export type TeamJoinPolicy = 'invitation-only' | 'request-to-join';
+
+export interface TeamInvitation {
+  id: string;
+  teamId: string;
+  teamName: string;
+  teamAvatar?: string;
+  inviteeEmail: string;
+  inviteeUserId?: string;
+  inviteeName?: string;
+  role: 'admin' | 'member';
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  invitedBy: string;
+  invitedByName: string;
+  message?: string;
+  createdAt: string;
+  respondedAt?: string;
+}
+
+export type TeamTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TeamTaskStatus = 'todo' | 'in_progress' | 'blocked' | 'completed';
+
+export interface TeamTaskSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface TeamTask {
+  id: string;
+  teamId: string;
+  projectId?: string;
+  projectTitle?: string;
+  title: string;
+  description?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  assigneeAvatar?: string;
+  creatorId: string;
+  creatorName: string;
+  priority: TeamTaskPriority;
+  status: TeamTaskStatus;
+  dueDate?: string;
+  subtasks: TeamTaskSubtask[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TeamActivityType =
+  | 'team_created'
+  | 'team_updated'
+  | 'member_invited'
+  | 'invitation_accepted'
+  | 'invitation_declined'
+  | 'invitation_cancelled'
+  | 'join_requested'
+  | 'join_approved'
+  | 'join_rejected'
+  | 'member_removed'
+  | 'member_left'
+  | 'role_changed'
+  | 'ownership_transferred'
+  | 'project_shared'
+  | 'project_unshared'
+  | 'task_created'
+  | 'task_assigned'
+  | 'task_status_changed'
+  | 'comment_posted'
+  | 'comment_deleted';
+
+export interface TeamActivityEvent {
+  id: string;
+  teamId: string;
+  type: TeamActivityType;
+  actorId: string;
+  actorName: string;
+  actorAvatar?: string;
+  title: string;
+  description?: string;
+  targetId?: string;
+  targetTitle?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface TeamComment {
+  id: string;
+  teamId: string;
+  projectId?: string;
+  taskId?: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  content: string;
+  mentions?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TeamAnalytics {
+  teamId: string;
+  activeSharedProjects: number;
+  totalTasks: number;
+  completedTasks: number;
+  overdueTasks: number;
+  taskCompletionRate: number;
+  averageProjectProgress: number;
+  recentActivitiesCount: number;
+  memberContributions: {
+    memberId: string;
+    memberName: string;
+    memberAvatar?: string;
+    role: string;
+    completedTasksCount: number;
+    assignedTasksCount: number;
+    sharedProjectsCount: number;
+    commentsCount: number;
+  }[];
+}
+
 export interface Team {
   id: string;
   name: string;
   description: string;
   avatar?: string;
+  visibility?: TeamVisibility;
+  categories?: string[];
+  joinPolicy?: TeamJoinPolicy;
   members: TeamMember[];
   projectIds: string[];
   createdAt: string;
   updatedAt: string;
   ownerId: string;
   joinRequests: JoinRequest[];
+  invitations?: TeamInvitation[];
 }
 
 export interface JoinRequest {

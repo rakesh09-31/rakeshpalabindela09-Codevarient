@@ -329,7 +329,7 @@ export function ProjectDetailPage() {
             ...msg,
             suggestions: msg.suggestions.map((s) => {
               if (s.id === sugId) {
-                if (s.type === 'add-task' && project.milestones.length > 0) {
+                if (s.type === 'add-task' && (project.milestones?.length || 0) > 0) {
                   addTask(project.id, project.milestones[0].id, {
                     title: String(s.data.title || 'Suggested AI Action'),
                     priority: (s.data.priority as Priority) || 'high',
@@ -612,7 +612,7 @@ export function ProjectDetailPage() {
                   Milestones
                 </span>
                 <span className="font-mono font-bold text-[var(--color-text)] text-sm">
-                  {completedMilestones.length}/{project.milestones.length}
+                  {completedMilestones.length}/{project.milestones?.length || 0}
                 </span>
               </div>
 
@@ -622,10 +622,10 @@ export function ProjectDetailPage() {
                 </span>
                 <span
                   className={`font-mono font-bold text-sm ${
-                    project.technicalBlockers.length > 0 ? 'text-[var(--color-status-paused)]' : 'text-[var(--color-success)]'
+                    (project.technicalBlockers?.length || 0) > 0 ? 'text-[var(--color-status-paused)]' : 'text-[var(--color-success)]'
                   }`}
                 >
-                  {project.technicalBlockers.length}
+                  {project.technicalBlockers?.length || 0}
                 </span>
               </div>
             </div>
@@ -646,10 +646,10 @@ export function ProjectDetailPage() {
           {[
             { id: 'overview', label: 'Overview & Case File', icon: BookOpen },
             { id: 'tasks', label: 'Tasks & Milestones', icon: Layers, count: allTasks.length },
-            { id: 'docs', label: 'Documentation & Files', icon: FileCode, count: project.attachments.length },
-            { id: 'timeline', label: 'Memory & Timeline', icon: History, count: project.timeline.length },
+            { id: 'docs', label: 'Documentation & Files', icon: FileCode, count: project.attachments?.length || 0 },
+            { id: 'timeline', label: 'Memory & Timeline', icon: History, count: project.timeline?.length || 0 },
             { id: 'ai', label: 'AI Companion', icon: Bot },
-            { id: 'team', label: 'Team', icon: Users, count: project.teamMembers.length },
+            { id: 'team', label: 'Team', icon: Users, count: project.teamMembers?.length || 0 },
             { id: 'settings', label: 'Settings', icon: SettingsIcon },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -850,7 +850,7 @@ export function ProjectDetailPage() {
                     </h2>
                   </div>
                   <span className="text-[11px] font-mono text-[var(--color-text-secondary)] uppercase tracking-wider">
-                    {project.technicalBlockers.length} Blockers
+                    {project.technicalBlockers?.length || 0} Blockers
                   </span>
                 </div>
 
@@ -876,9 +876,9 @@ export function ProjectDetailPage() {
                     Technical Blockers & Bottlenecks
                   </h3>
 
-                  {project.technicalBlockers.length > 0 ? (
+                  {(project.technicalBlockers?.length || 0) > 0 ? (
                     <div className="space-y-2.5">
-                      {project.technicalBlockers.map((b, idx) => (
+                      {(project.technicalBlockers || []).map((b, idx) => (
                         <div
                           key={idx}
                           className="flex items-start gap-3 p-3.5 rounded-2xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)]"
@@ -1116,7 +1116,7 @@ export function ProjectDetailPage() {
                       Milestones Done
                     </span>
                     <span className="font-mono font-bold text-sm text-[var(--color-text)]">
-                      {completedMilestones.length} / {project.milestones.length}
+                      {completedMilestones.length} / {project.milestones?.length || 0}
                     </span>
                   </div>
 
@@ -1135,10 +1135,10 @@ export function ProjectDetailPage() {
                     </span>
                     <span
                       className={`font-mono font-bold text-sm ${
-                        project.technicalBlockers.length > 0 ? 'text-[var(--color-status-paused)]' : 'text-[var(--color-success)]'
+                        (project.technicalBlockers?.length || 0) > 0 ? 'text-[var(--color-status-paused)]' : 'text-[var(--color-success)]'
                       }`}
                     >
-                      {project.technicalBlockers.length} Active
+                      {project.technicalBlockers?.length || 0} Active
                     </span>
                   </div>
 
@@ -1147,7 +1147,7 @@ export function ProjectDetailPage() {
                       Timeline Events
                     </span>
                     <span className="font-mono font-bold text-sm text-[var(--color-text)]">
-                      {project.timeline.length} Logged
+                      {project.timeline?.length || 0} Logged
                     </span>
                   </div>
                 </div>
@@ -1228,12 +1228,12 @@ export function ProjectDetailPage() {
                       Languages & Frameworks
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {project.languages.concat(project.frameworks).map((tech) => (
+                      {(project.languages || []).concat(project.frameworks || []).map((tech) => (
                         <Badge key={tech} variant="tech" size="sm">
                           {tech}
                         </Badge>
                       ))}
-                      {project.languages.length === 0 && project.frameworks.length === 0 && (
+                      {(project.languages?.length || 0) === 0 && (project.frameworks?.length || 0) === 0 && (
                         <span className="text-xs text-[var(--color-text-muted)] italic">None specified</span>
                       )}
                     </div>
@@ -1288,7 +1288,7 @@ export function ProjectDetailPage() {
                     onClick={() => setActiveTab('team')}
                     className="text-xs text-[var(--color-brand)] hover:underline font-mono"
                   >
-                    View Team ({project.teamMembers.length})
+                    View Team ({(project.teamMembers?.length || 0)})
                   </button>
                 </div>
 
@@ -1334,7 +1334,7 @@ export function ProjectDetailPage() {
             </div>
 
             <div className="space-y-5">
-              {project.milestones.length === 0 ? (
+              {(project.milestones?.length || 0) === 0 ? (
                 <div className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-12 text-center space-y-3">
                   <Layers className="w-10 h-10 text-[var(--color-text-muted)] mx-auto" />
                   <h4 className="text-base font-semibold text-[var(--color-text)]">No Milestones Recorded</h4>
@@ -1792,7 +1792,7 @@ ${project.summary}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {project.teamMembers.map((member) => (
+              {(project.teamMembers || []).map((member) => (
                 <div
                   key={member.id}
                   className="bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] p-5 flex items-start gap-3 shadow-xs"
@@ -2442,11 +2442,12 @@ ${project.summary}
 
 function calculateReadiness(project: Project) {
   let score = 50;
-  const codeProgressScore = project.progress;
+  const codeProgressScore = project.progress || 0;
   score += Math.round(codeProgressScore * 0.3);
-  const blockerScore = Math.max(0, 100 - project.technicalBlockers.length * 35);
-  score -= project.technicalBlockers.length * 15;
-  const teamScore = Math.min(100, project.teamMembers.length * 40);
+  const blockerCount = project.technicalBlockers?.length || 0;
+  const blockerScore = Math.max(0, 100 - blockerCount * 35);
+  score -= blockerCount * 15;
+  const teamScore = Math.min(100, (project.teamMembers?.length || 0) * 40);
   score = Math.max(15, Math.min(95, score));
 
   let label = 'Moderate Revival Effort';

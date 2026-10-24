@@ -4,6 +4,12 @@ import fs from 'node:fs';
 import type {
   Project,
   Team,
+  TeamInvitation,
+  TeamTask,
+  TeamActivityEvent,
+  TeamComment,
+  TeamAnalytics,
+  JoinRequest,
   Reminder,
   FusionProposal,
   Task,
@@ -39,6 +45,7 @@ export class DatabaseManager {
     this.initSchema();
     this.seedIfEmpty();
     this.seedSocialIfEmpty();
+    this.seedTeamsCollaborationIfEmpty();
   }
 
   private initSchema() {
@@ -149,6 +156,53 @@ export class DatabaseManager {
 
       CREATE INDEX IF NOT EXISTS idx_events_reminder ON reminder_events (reminder_id);
       CREATE INDEX IF NOT EXISTS idx_events_user ON reminder_events (user_id);
+
+      CREATE TABLE IF NOT EXISTS team_tasks (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        project_id TEXT,
+        assignee_id TEXT,
+        status TEXT NOT NULL,
+        priority TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_tasks_team ON team_tasks (team_id);
+      CREATE INDEX IF NOT EXISTS idx_team_tasks_assignee ON team_tasks (assignee_id);
+
+      CREATE TABLE IF NOT EXISTS team_activities (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        actor_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_activities_team ON team_activities (team_id);
+
+      CREATE TABLE IF NOT EXISTS team_comments (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        project_id TEXT,
+        task_id TEXT,
+        author_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_comments_team ON team_comments (team_id);
+
+      CREATE TABLE IF NOT EXISTS team_invitations (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL,
+        invitee_email TEXT NOT NULL,
+        invitee_user_id TEXT,
+        status TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_invitations_team ON team_invitations (team_id);
+      CREATE INDEX IF NOT EXISTS idx_team_invitations_invitee ON team_invitations (invitee_email, invitee_user_id);
     `);
 
     // Safe migration checks for existing reminders table
@@ -324,16 +378,254 @@ export class DatabaseManager {
     }
   }
 
+  private seedTeamsCollaborationIfEmpty() {
+    // 1. Seed initial team tasks if empty
+    try {
+      const taskCount = (this.db.prepare('SELECT COUNT(*) as count FROM team_tasks').get() as { count: number }).count;
+      if (taskCount === 0) {
+        const insertTask = this.db.prepare(`
+          INSERT INTO team_tasks (id, team_id, project_id, assignee_id, status, priority, data, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const now = new Date();
+        const twoDaysFuture = new Date(now.getTime() + 2 * 86400000).toISOString();
+        const yesterday = new Date(now.getTime() - 86400000).toISOString();
+        const fiveDaysFuture = new Date(now.getTime() + 5 * 86400000).toISOString();
+        const nowIso = now.toISOString();
+
+        const task1: TeamTask = {
+          id: 'ttask-1',
+          teamId: 'team-1',
+          projectId: 'proj-6',
+          projectTitle: 'GreenRoute',
+          title: 'Optimize graph search routing engine to sub-100ms',
+          description: 'Benchmark Dijkstra vs A* and test heuristic weightings with 500k road nodes.',
+          assigneeId: 'user-1',
+          assigneeName: 'Alex Rivera',
+          creatorId: 'user-1',
+          creatorName: 'Alex Rivera',
+          priority: 'urgent',
+          status: 'in_progress',
+          dueDate: twoDaysFuture,
+          subtasks: [
+            { id: 'st-1', title: 'Benchmark baseline traversal latency', completed: true },
+            { id: 'st-2', title: 'Implement binary heap priority queue in Rust', completed: true },
+            { id: 'st-3', title: 'Validate memory profile under high concurrency', completed: false },
+          ],
+          createdAt: yesterday,
+          updatedAt: nowIso,
+        };
+
+        const task2: TeamTask = {
+          id: 'ttask-2',
+          teamId: 'team-1',
+          projectId: 'proj-1',
+          projectTitle: 'EcoTrack',
+          title: 'WatermelonDB offline conflict resolution edge case testing',
+          description: 'Simulate high-latency offline queuing and verify CRDT sync stability.',
+          assigneeId: 'user-2',
+          assigneeName: 'Elena Rostova',
+          creatorId: 'user-1',
+          creatorName: 'Alex Rivera',
+          priority: 'high',
+          status: 'completed',
+          dueDate: yesterday,
+          subtasks: [
+            { id: 'st-4', title: 'Write offline queue simulation test harness', completed: true },
+            { id: 'st-5', title: 'Verify schema v2 SQLite migration on device', completed: true },
+          ],
+          createdAt: yesterday,
+          updatedAt: nowIso,
+        };
+
+        const task3: TeamTask = {
+          id: 'ttask-3',
+          teamId: 'team-1',
+          projectId: 'proj-1',
+          projectTitle: 'EcoTrack',
+          title: 'Design mobile habit tracker check-in UX',
+          description: 'Create responsive check-in flow with accessible micro-interactions for daily eco-actions.',
+          assigneeId: 'user-4',
+          assigneeName: 'Maya Lin',
+          creatorId: 'user-1',
+          creatorName: 'Alex Rivera',
+          priority: 'medium',
+          status: 'todo',
+          dueDate: fiveDaysFuture,
+          subtasks: [
+            { id: 'st-6', title: 'Produce wireframes in Figma', completed: false },
+            { id: 'st-7', title: 'Conduct WCAG AA color contrast audit', completed: false },
+          ],
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+
+        insertTask.run(task1.id, task1.teamId, task1.projectId || null, task1.assigneeId || null, task1.status, task1.priority, JSON.stringify(task1), task1.createdAt, task1.updatedAt);
+        insertTask.run(task2.id, task2.teamId, task2.projectId || null, task2.assigneeId || null, task2.status, task2.priority, JSON.stringify(task2), task2.createdAt, task2.updatedAt);
+        insertTask.run(task3.id, task3.teamId, task3.projectId || null, task3.assigneeId || null, task3.status, task3.priority, JSON.stringify(task3), task3.createdAt, task3.updatedAt);
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Seed initial team activities if empty
+    try {
+      const actCount = (this.db.prepare('SELECT COUNT(*) as count FROM team_activities').get() as { count: number }).count;
+      if (actCount === 0) {
+        const insertAct = this.db.prepare(`
+          INSERT INTO team_activities (id, team_id, type, actor_id, data, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        const yesterdayIso = new Date(Date.now() - 86400000).toISOString();
+
+        const acts: TeamActivityEvent[] = [
+          {
+            id: 'act-1',
+            teamId: 'team-1',
+            type: 'team_created',
+            actorId: 'user-1',
+            actorName: 'Alex Rivera',
+            title: 'Alex Rivera created Team Verdant',
+            description: 'Civic technologists and product designers building sustainable software.',
+            createdAt: '2025-01-15T09:00:00.000Z',
+          },
+          {
+            id: 'act-2',
+            teamId: 'team-1',
+            type: 'project_shared',
+            actorId: 'user-1',
+            actorName: 'Alex Rivera',
+            title: 'Shared project "EcoTrack" with Team Verdant',
+            targetId: 'proj-1',
+            targetTitle: 'EcoTrack',
+            createdAt: '2025-01-15T10:00:00.000Z',
+          },
+          {
+            id: 'act-3',
+            teamId: 'team-1',
+            type: 'project_shared',
+            actorId: 'user-1',
+            actorName: 'Alex Rivera',
+            title: 'Shared project "GreenRoute" with Team Verdant',
+            targetId: 'proj-6',
+            targetTitle: 'GreenRoute',
+            createdAt: '2025-01-16T12:00:00.000Z',
+          },
+          {
+            id: 'act-4',
+            teamId: 'team-1',
+            type: 'join_approved',
+            actorId: 'user-1',
+            actorName: 'Alex Rivera',
+            title: 'Elena Rostova joined as Admin',
+            createdAt: '2025-03-10T14:00:00.000Z',
+          },
+          {
+            id: 'act-5',
+            teamId: 'team-1',
+            type: 'join_approved',
+            actorId: 'user-1',
+            actorName: 'Alex Rivera',
+            title: 'Maya Lin joined as Member',
+            createdAt: '2025-07-10T11:00:00.000Z',
+          },
+          {
+            id: 'act-6',
+            teamId: 'team-1',
+            type: 'task_status_changed',
+            actorId: 'user-2',
+            actorName: 'Elena Rostova',
+            title: 'Task "WatermelonDB offline conflict resolution edge case testing" marked as completed',
+            targetId: 'ttask-2',
+            targetTitle: 'WatermelonDB offline conflict resolution edge case testing',
+            createdAt: yesterdayIso,
+          },
+        ];
+
+        for (const act of acts) {
+          insertAct.run(act.id, act.teamId, act.type, act.actorId, JSON.stringify(act), act.createdAt);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Seed initial team comments if empty
+    try {
+      const commCount = (this.db.prepare('SELECT COUNT(*) as count FROM team_comments').get() as { count: number }).count;
+      if (commCount === 0) {
+        const insertComm = this.db.prepare(`
+          INSERT INTO team_comments (id, team_id, project_id, task_id, author_id, data, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        const comm1: TeamComment = {
+          id: 'tcomm-1',
+          teamId: 'team-1',
+          projectId: 'proj-1',
+          authorId: 'user-1',
+          authorName: 'Alex Rivera',
+          content: '@Elena Rostova, let\'s make sure the offline SQLite sync handles schema v2 migrations smoothly before next week\'s beta.',
+          mentions: ['Elena Rostova'],
+          createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+        };
+        const comm2: TeamComment = {
+          id: 'tcomm-2',
+          teamId: 'team-1',
+          projectId: 'proj-1',
+          authorId: 'user-2',
+          authorName: 'Elena Rostova',
+          content: 'Working on it today! The conflict resolution tests are passing on iOS and Android.',
+          mentions: [],
+          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+        };
+        insertComm.run(comm1.id, comm1.teamId, comm1.projectId || null, null, comm1.authorId, JSON.stringify(comm1), comm1.createdAt);
+        insertComm.run(comm2.id, comm2.teamId, comm2.projectId || null, null, comm2.authorId, JSON.stringify(comm2), comm2.createdAt);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  isProjectSharedWithUserTeams(projectId: string, userId: string): boolean {
+    try {
+      const rows = this.db.prepare('SELECT data FROM teams').all() as { data: string }[];
+      for (const row of rows) {
+        const team = JSON.parse(row.data) as Team;
+        const hasProject = team.projectIds && team.projectIds.includes(projectId);
+        const hasUser = team.ownerId === userId || (team.members && team.members.some((m) => m.id === userId));
+        if (hasProject && hasUser) return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  }
+
   // ---------------- PROJECT CRUD ----------------
   getProjects(userId: string = 'user-1'): Project[] {
     const rows = this.db.prepare('SELECT data FROM projects ORDER BY updated_at DESC').all() as { data: string }[];
-    const all = rows.map((r) => JSON.parse(r.data) as Project);
-    // Filter visible to requesting user: user is owner OR member OR visibility is public or team
+    const all = rows.map((r) => {
+      const p = JSON.parse(r.data) as Project;
+      return {
+        ...p,
+        languages: p.languages || [],
+        frameworks: p.frameworks || [],
+        libraries: p.libraries || [],
+        milestones: p.milestones || [],
+        completedFeatures: p.completedFeatures || [],
+        inProgressFeatures: p.inProgressFeatures || [],
+        plannedFeatures: p.plannedFeatures || [],
+        technicalBlockers: p.technicalBlockers || [],
+        teamMembers: p.teamMembers || [],
+      };
+    });
+    // Filter visible to requesting user: user is owner OR member OR visibility is public or team OR shared with user's team
     return all.filter((p) => {
       if (p.visibility === 'public') return true;
       if (p.ownerId === userId) return true;
       if (p.teamMembers && p.teamMembers.some((m) => m.id === userId)) return true;
       if (p.visibility === 'team') return true;
+      if (this.isProjectSharedWithUserTeams(p.id, userId)) return true;
       return false;
     });
   }
@@ -342,10 +634,24 @@ export class DatabaseManager {
     const row = this.db.prepare('SELECT data FROM projects WHERE id = ?').get(id) as { data: string } | undefined;
     if (!row) return null;
     const project = JSON.parse(row.data) as Project;
-    // Authorization check: if private and not owned or member -> deny
-    if (project.visibility === 'private' && project.ownerId !== userId && !project.teamMembers.some((m) => m.id === userId)) {
+    // Authorization check: if private and not owned or member and not shared with user's team -> deny
+    if (
+      project.visibility === 'private' &&
+      project.ownerId !== userId &&
+      !(project.teamMembers && project.teamMembers.some((m) => m.id === userId)) &&
+      !this.isProjectSharedWithUserTeams(project.id, userId)
+    ) {
       return null;
     }
+    project.languages = project.languages || [];
+    project.frameworks = project.frameworks || [];
+    project.libraries = project.libraries || [];
+    project.milestones = project.milestones || [];
+    project.completedFeatures = project.completedFeatures || [];
+    project.inProgressFeatures = project.inProgressFeatures || [];
+    project.plannedFeatures = project.plannedFeatures || [];
+    project.technicalBlockers = project.technicalBlockers || [];
+    project.teamMembers = project.teamMembers || [];
     return project;
   }
 
@@ -354,6 +660,11 @@ export class DatabaseManager {
     project.id = project.id || `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     project.ownerId = project.ownerId || 'user-1';
     project.category = project.category || 'General';
+    project.milestones = project.milestones || [];
+    project.completedFeatures = project.completedFeatures || [];
+    project.inProgressFeatures = project.inProgressFeatures || [];
+    project.plannedFeatures = project.plannedFeatures || [];
+    project.technicalBlockers = project.technicalBlockers || [];
     project.progress = calculateProjectProgress(project);
     project.createdAt = project.createdAt || now;
     project.updatedAt = now;
@@ -571,34 +882,1298 @@ export class DatabaseManager {
     return this.updateProject(projectId, { milestones: project.milestones });
   }
 
-  // ---------------- TEAMS CRUD ----------------
-  getTeams(): Team[] {
+  // ---------------- TEAMS CRUD & COLLABORATION ----------------
+  getTeams(options?: { userId?: string; visibility?: string; category?: string; query?: string; discoverableOnly?: boolean }): Team[] {
     const rows = this.db.prepare('SELECT data FROM teams ORDER BY updated_at DESC').all() as { data: string }[];
-    return rows.map((r) => JSON.parse(r.data) as Team);
+    let all = rows.map((r) => {
+      const t = JSON.parse(r.data) as Team;
+      return {
+        ...t,
+        visibility: t.visibility || 'discoverable',
+        categories: t.categories || [],
+        joinPolicy: t.joinPolicy || 'request-to-join',
+        invitations: t.invitations || [],
+      };
+    });
+
+    const isDiscoverableOnly = Boolean(options?.discoverableOnly || options?.visibility === 'discoverable');
+    const userId = options?.userId;
+    const category = options?.category;
+    const query = options?.query;
+
+    if (isDiscoverableOnly) {
+      all = all.filter((t) => t.visibility === 'discoverable');
+    } else if (userId) {
+      // Return teams user belongs to + discoverable teams
+      // Private teams that user does not belong to are strictly excluded
+      all = all.filter((t) => {
+        const isMemberOrOwner = t.ownerId === userId || (t.members && t.members.some((m) => m.id === userId));
+        if (isMemberOrOwner) return true;
+        return t.visibility === 'discoverable';
+      });
+    } else if (options?.visibility === 'private') {
+      all = all.filter((t) => t.visibility === 'private');
+    } else if (options?.visibility) {
+      all = all.filter((t) => t.visibility === options.visibility);
+    } else {
+      // Default to discoverable teams when unauthenticated to avoid leaking private teams
+      all = all.filter((t) => t.visibility === 'discoverable');
+    }
+
+    if (category && category !== 'all') {
+      all = all.filter((t) => t.categories && t.categories.includes(category));
+    }
+
+    if (query) {
+      const q = query.toLowerCase().trim();
+      all = all.filter((t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.description && t.description.toLowerCase().includes(q)) ||
+        (t.categories && t.categories.some((c) => c.toLowerCase().includes(q)))
+      );
+    }
+
+    return all;
   }
 
-  createTeam(team: Team): Team {
+  getTeam(id: string, userId?: string): Team | null {
+    const row = this.db.prepare('SELECT data FROM teams WHERE id = ?').get(id) as { data: string } | undefined;
+    if (!row) return null;
+    const team = JSON.parse(row.data) as Team;
+    team.visibility = team.visibility || 'discoverable';
+    team.categories = team.categories || [];
+    team.joinPolicy = team.joinPolicy || 'request-to-join';
+
+    // Privacy check: private teams are restricted to owner or members
+    if (userId && team.visibility === 'private') {
+      const isMember = team.ownerId === userId || (team.members && team.members.some((m) => m.id === userId));
+      if (!isMember) return null;
+    }
+
+    // Attach pending invitations from team_invitations table
+    try {
+      const invRows = this.db.prepare("SELECT data FROM team_invitations WHERE team_id = ? AND status = 'pending'").all(id) as { data: string }[];
+      team.invitations = invRows.map((r) => JSON.parse(r.data) as TeamInvitation);
+    } catch {
+      team.invitations = team.invitations || [];
+    }
+
+    return team;
+  }
+
+  createTeam(team: Team, creatorUserId?: string): Team {
+    if (!team.name || !team.name.trim()) {
+      throw new Error('Team name is required');
+    }
+    if (team.name.trim().length > 100) {
+      throw new Error('Team name must not exceed 100 characters');
+    }
+
+    const now = new Date().toISOString();
+    const ownerId = creatorUserId || team.ownerId || 'user-1';
+
+    let ownerName = 'Alex Rivera';
+    let ownerSkills: string[] = ['Full Stack', 'Architecture'];
+    try {
+      const ownerProfile = this.getUserSocialProfile(ownerId);
+      if (ownerProfile) {
+        ownerName = ownerProfile.name || ownerName;
+        ownerSkills = ownerProfile.skills || ownerSkills;
+      }
+    } catch {
+      // fallback
+    }
+
+    const enrichedTeam: Team = {
+      ...team,
+      id: team.id || `team-${Date.now().toString(36)}`,
+      name: team.name.trim(),
+      description: team.description?.trim() || '',
+      visibility: team.visibility || 'discoverable',
+      categories: team.categories || [],
+      joinPolicy: team.joinPolicy || 'request-to-join',
+      ownerId,
+      projectIds: team.projectIds || [],
+      members: team.members && team.members.length > 0 ? team.members : [
+        {
+          id: ownerId,
+          name: ownerName,
+          role: 'owner',
+          skills: ownerSkills,
+          availability: 'full-time',
+          joinedAt: now,
+        },
+      ],
+      joinRequests: team.joinRequests || [],
+      invitations: team.invitations || [],
+      createdAt: team.createdAt || now,
+      updatedAt: now,
+    };
+
+    // Ensure owner is in members list with owner role
+    if (!enrichedTeam.members.some((m) => m.id === ownerId)) {
+      enrichedTeam.members.unshift({
+        id: ownerId,
+        name: ownerName,
+        role: 'owner',
+        skills: ownerSkills,
+        availability: 'full-time',
+        joinedAt: now,
+      });
+    }
+
     const stmt = this.db.prepare(`
       INSERT INTO teams (id, name, owner_id, data, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(team.id, team.name, team.ownerId, JSON.stringify(team), team.createdAt, team.updatedAt);
-    return team;
+    stmt.run(enrichedTeam.id, enrichedTeam.name, enrichedTeam.ownerId, JSON.stringify(enrichedTeam), enrichedTeam.createdAt, enrichedTeam.updatedAt);
+
+    this.recordTeamActivity({
+      teamId: enrichedTeam.id,
+      type: 'team_created',
+      actorId: ownerId,
+      actorName: ownerName,
+      title: `${ownerName} created team "${enrichedTeam.name}"`,
+      description: enrichedTeam.description,
+    });
+
+    return enrichedTeam;
   }
 
-  updateTeam(id: string, updates: Partial<Team>): Team {
-    const rows = this.db.prepare('SELECT data FROM teams WHERE id = ?').get(id) as { data: string } | undefined;
-    if (!rows) throw new Error('Team not found');
-    const existing = JSON.parse(rows.data) as Team;
-    const updated = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+  updateTeam(id: string, updates: Partial<Team>, actingUserId?: string): Team {
+    const row = this.db.prepare('SELECT data FROM teams WHERE id = ?').get(id) as { data: string } | undefined;
+    if (!row) throw new Error('Team not found');
+    const existing = JSON.parse(row.data) as Team;
+
+    if (actingUserId) {
+      const member = existing.members.find((m) => m.id === actingUserId);
+      const isOwner = existing.ownerId === actingUserId || member?.role === 'owner';
+      const isAdmin = member?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        throw new Error('Forbidden: Only team owners or admins can update team details');
+      }
+      if (updates.ownerId && updates.ownerId !== existing.ownerId && !isOwner) {
+        throw new Error('Forbidden: Only the team owner can change team ownership');
+      }
+    }
+
+    if (updates.name !== undefined) {
+      if (!updates.name.trim()) throw new Error('Team name cannot be empty');
+      if (updates.name.trim().length > 100) throw new Error('Team name must not exceed 100 characters');
+      updates.name = updates.name.trim();
+    }
+
+    const now = new Date().toISOString();
+    const updated: Team = {
+      ...existing,
+      ...updates,
+      updatedAt: now,
+    };
+
     const stmt = this.db.prepare('UPDATE teams SET name = ?, data = ?, updated_at = ? WHERE id = ?');
     stmt.run(updated.name, JSON.stringify(updated), updated.updatedAt, id);
+
+    if (actingUserId) {
+      const actor = existing.members.find((m) => m.id === actingUserId);
+      this.recordTeamActivity({
+        teamId: id,
+        type: 'team_updated',
+        actorId: actingUserId,
+        actorName: actor?.name || 'Team Admin',
+        title: 'Team details updated',
+      });
+    }
+
     return updated;
   }
 
-  deleteTeam(id: string): void {
+  deleteTeam(id: string, actingUserId?: string): void {
+    const row = this.db.prepare('SELECT data FROM teams WHERE id = ?').get(id) as { data: string } | undefined;
+    if (!row) return;
+    const team = JSON.parse(row.data) as Team;
+
+    if (actingUserId) {
+      if (team.ownerId !== actingUserId) {
+        throw new Error('Forbidden: Only the team owner can delete the team');
+      }
+    }
+
+    // Safeguard: Unshare all projects without deleting the underlying projects!
+    if (team.projectIds && team.projectIds.length > 0) {
+      for (const pid of team.projectIds) {
+        try {
+          const proj = this.getProject(pid);
+          if (proj && (proj as any).sharedTeamIds) {
+            const nextShared = ((proj as any).sharedTeamIds as string[]).filter((tId) => tId !== id);
+            this.updateProject(pid, { sharedTeamIds: nextShared } as any);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    // Clean up team tasks, activities, comments, invitations
+    try {
+      this.db.prepare('DELETE FROM team_tasks WHERE team_id = ?').run(id);
+      this.db.prepare('DELETE FROM team_activities WHERE team_id = ?').run(id);
+      this.db.prepare('DELETE FROM team_comments WHERE team_id = ?').run(id);
+      this.db.prepare('DELETE FROM team_invitations WHERE team_id = ?').run(id);
+    } catch {
+      // ignore
+    }
+
     const stmt = this.db.prepare('DELETE FROM teams WHERE id = ?');
     stmt.run(id);
+  }
+
+  transferTeamOwnership(teamId: string, newOwnerId: string, currentOwnerId: string): Team {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+    if (team.ownerId !== currentOwnerId) {
+      throw new Error('Forbidden: Only the current owner can transfer ownership');
+    }
+    const newOwnerMember = team.members.find((m) => m.id === newOwnerId);
+    if (!newOwnerMember) {
+      throw new Error('Target user must be a member of the team to become owner');
+    }
+
+    team.ownerId = newOwnerId;
+    team.members = team.members.map((m) => {
+      if (m.id === currentOwnerId) return { ...m, role: 'admin' as const };
+      if (m.id === newOwnerId) return { ...m, role: 'owner' as const };
+      return m;
+    });
+
+    this.updateTeam(teamId, { ownerId: newOwnerId, members: team.members });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'ownership_transferred',
+      actorId: currentOwnerId,
+      actorName: team.members.find((m) => m.id === currentOwnerId)?.name || 'Former Owner',
+      title: `Team ownership transferred to ${newOwnerMember.name}`,
+    });
+
+    this.createInAppNotification({
+      type: 'team-event',
+      userId: newOwnerId,
+      title: 'You are now Team Owner',
+      message: `Ownership of "${team.name}" has been transferred to you.`,
+      teamId,
+    });
+
+    return team;
+  }
+
+  leaveTeam(teamId: string, userId: string): Team {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    const member = team.members.find((m) => m.id === userId);
+    if (!member) throw new Error('You are not a member of this team');
+
+    if (team.ownerId === userId || member.role === 'owner') {
+      const otherMembers = team.members.filter((m) => m.id !== userId);
+      if (otherMembers.length > 0) {
+        throw new Error('Cannot leave team as sole owner. Transfer ownership to another member first.');
+      } else {
+        throw new Error('Cannot leave team as sole owner. Delete the team to dissolve it.');
+      }
+    }
+
+    team.members = team.members.filter((m) => m.id !== userId);
+    this.updateTeam(teamId, { members: team.members });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'member_left',
+      actorId: userId,
+      actorName: member.name,
+      title: `${member.name} left the team`,
+    });
+
+    return team;
+  }
+
+  updateMemberRole(teamId: string, targetUserId: string, newRole: 'admin' | 'member', actingUserId: string): Team {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const targetMember = team.members.find((m) => m.id === targetUserId);
+    if (!targetMember) throw new Error('Member not found in team');
+
+    const isActingOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isActingAdmin = actingMember?.role === 'admin';
+
+    if (!isActingOwner && !isActingAdmin) {
+      throw new Error('Forbidden: Only owners or admins can change member roles');
+    }
+
+    if (targetMember.role === 'owner' || targetUserId === team.ownerId) {
+      throw new Error('Forbidden: Cannot change the Owner role directly. Transfer ownership instead.');
+    }
+
+    if (isActingAdmin && !isActingOwner && targetMember.role === 'admin') {
+      throw new Error('Forbidden: Admins cannot modify roles of other admins');
+    }
+
+    team.members = team.members.map((m) => {
+      if (m.id === targetUserId) {
+        return { ...m, role: newRole };
+      }
+      return m;
+    });
+
+    this.updateTeam(teamId, { members: team.members });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'role_changed',
+      actorId: actingUserId,
+      actorName: actingMember?.name || 'Admin',
+      title: `${targetMember.name}'s role updated to ${newRole}`,
+    });
+
+    this.createInAppNotification({
+      type: 'team-event',
+      userId: targetUserId,
+      title: 'Team Role Updated',
+      message: `Your role in "${team.name}" was changed to ${newRole}.`,
+      teamId,
+    });
+
+    return team;
+  }
+
+  removeTeamMember(teamId: string, targetUserId: string, actingUserId: string): Team {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const targetMember = team.members.find((m) => m.id === targetUserId);
+    if (!targetMember) throw new Error('Member not found in team');
+
+    const isSelf = targetUserId === actingUserId;
+    const isActingOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isActingAdmin = actingMember?.role === 'admin';
+
+    if (isSelf) {
+      return this.leaveTeam(teamId, actingUserId);
+    }
+
+    if (!isActingOwner && !isActingAdmin) {
+      throw new Error('Forbidden: Only team owners and admins can remove members');
+    }
+    if (targetMember.role === 'owner' || targetUserId === team.ownerId) {
+      throw new Error('Forbidden: The team owner cannot be removed');
+    }
+    if (isActingAdmin && !isActingOwner && targetMember.role === 'admin') {
+      throw new Error('Forbidden: Admins cannot remove other admins');
+    }
+
+    team.members = team.members.filter((m) => m.id !== targetUserId);
+    this.updateTeam(teamId, { members: team.members });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'member_removed',
+      actorId: actingUserId,
+      actorName: actingMember?.name || 'Admin',
+      title: `${targetMember.name} was removed from the team`,
+    });
+
+    this.createInAppNotification({
+      type: 'team-event',
+      userId: targetUserId,
+      title: 'Removed from Team',
+      message: `You were removed from "${team.name}".`,
+      teamId,
+    });
+
+    return team;
+  }
+
+  createTeamInvitation(
+    teamId: string,
+    inviteeIdentifier: string,
+    role: 'admin' | 'member' = 'member',
+    actingUserId: string,
+    message?: string
+  ): { invitation: TeamInvitation; emailDelivery: { sent: boolean; reason: string } } {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const isOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isAdmin = actingMember?.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new Error('Forbidden: Only team owners or admins can invite members');
+    }
+
+    const cleanIdentifier = inviteeIdentifier.trim().toLowerCase();
+    if (!cleanIdentifier) throw new Error('Invitee username or email is required');
+
+    const allUsers = this.getUserProfiles();
+    const matchedUser = allUsers.find(
+      (u) =>
+        (u.email && u.email.toLowerCase() === cleanIdentifier) ||
+        (u.username && u.username.toLowerCase() === cleanIdentifier) ||
+        u.id.toLowerCase() === cleanIdentifier
+    );
+
+    const targetUserId = matchedUser?.id;
+    const targetEmail = matchedUser?.email || (cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@example.com`);
+    const targetName = matchedUser?.name || cleanIdentifier;
+
+    if (targetUserId && targetUserId === actingUserId) {
+      throw new Error('Cannot invite yourself to the team');
+    }
+
+    if (team.members.some((m) => m.id === targetUserId || (m.email && m.email.toLowerCase() === cleanIdentifier))) {
+      throw new Error('User is already a member of this team');
+    }
+
+    const existingPending = this.db.prepare(`
+      SELECT data FROM team_invitations
+      WHERE team_id = ? AND (invitee_email = ? OR invitee_user_id = ?) AND status = 'pending'
+    `).get(teamId, targetEmail, targetUserId || '') as { data: string } | undefined;
+
+    if (existingPending) {
+      throw new Error('A pending invitation already exists for this user');
+    }
+
+    const now = new Date().toISOString();
+    const invitation: TeamInvitation = {
+      id: `inv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      teamId,
+      teamName: team.name,
+      teamAvatar: team.avatar,
+      inviteeEmail: targetEmail,
+      inviteeUserId: targetUserId,
+      inviteeName: targetName,
+      role,
+      status: 'pending',
+      invitedBy: actingUserId,
+      invitedByName: actingMember?.name || 'Team Admin',
+      message: message?.trim(),
+      createdAt: now,
+    };
+
+    const stmt = this.db.prepare(`
+      INSERT INTO team_invitations (id, team_id, invitee_email, invitee_user_id, status, data, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(invitation.id, invitation.teamId, invitation.inviteeEmail, invitation.inviteeUserId || null, invitation.status, JSON.stringify(invitation), invitation.createdAt);
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'member_invited',
+      actorId: actingUserId,
+      actorName: actingMember?.name || 'Admin',
+      title: `Invited ${targetName} (${role})`,
+      description: message,
+    });
+
+    if (targetUserId) {
+      this.createInAppNotification({
+        type: 'team-event',
+        userId: targetUserId,
+        title: `Team Invitation: ${team.name}`,
+        message: `${actingMember?.name || 'Team Admin'} invited you to join "${team.name}" as ${role}.`,
+        teamId,
+        metadata: { invitationId: invitation.id },
+      });
+    }
+
+    return {
+      invitation,
+      emailDelivery: {
+        sent: false,
+        reason: 'External SMTP email delivery is not configured. In-app invitation delivered.',
+      },
+    };
+  }
+
+  getTeamInvitations(teamId: string, actingUserId?: string): TeamInvitation[] {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId) {
+      const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+      if (!isMember) throw new Error('Forbidden: Only team members can view invitations');
+    }
+
+    const rows = this.db.prepare(`
+      SELECT data FROM team_invitations
+      WHERE team_id = ?
+      ORDER BY created_at DESC
+    `).all(teamId) as { data: string }[];
+
+    return rows.map((r) => JSON.parse(r.data) as TeamInvitation);
+  }
+
+  getUserInvitations(userId: string, email?: string): TeamInvitation[] {
+    let query = "SELECT data FROM team_invitations WHERE status = 'pending' AND (invitee_user_id = ?";
+    const params: any[] = [userId];
+    if (email) {
+      query += ' OR LOWER(invitee_email) = LOWER(?)';
+      params.push(email);
+    }
+    query += ') ORDER BY created_at DESC';
+
+    const rows = this.db.prepare(query).all(...params) as { data: string }[];
+    return rows.map((r) => JSON.parse(r.data) as TeamInvitation);
+  }
+
+  acceptTeamInvitation(invitationId: string, acceptingUserId: string): { team: Team; invitation: TeamInvitation } {
+    const row = this.db.prepare('SELECT data FROM team_invitations WHERE id = ?').get(invitationId) as { data: string } | undefined;
+    if (!row) throw new Error('Invitation not found');
+    const invitation = JSON.parse(row.data) as TeamInvitation;
+
+    if (invitation.status !== 'pending') {
+      throw new Error(`Invitation is already ${invitation.status}`);
+    }
+
+    const user = this.getUserSocialProfile(acceptingUserId);
+    const userName = user?.name || 'User';
+    const userEmail = user?.email;
+    const userAvatar = user?.avatar;
+    const userSkills = user?.skills || [];
+    const matchesUser =
+      (invitation.inviteeUserId && invitation.inviteeUserId === acceptingUserId) ||
+      (userEmail && userEmail.toLowerCase() === invitation.inviteeEmail.toLowerCase()) ||
+      (user?.username && user.username.toLowerCase() === invitation.inviteeEmail.toLowerCase());
+
+    if (!matchesUser) {
+      throw new Error('Forbidden: You cannot accept an invitation intended for another user');
+    }
+
+    const team = this.getTeam(invitation.teamId);
+    if (!team) throw new Error('Team no longer exists');
+
+    if (!team.members.some((m) => m.id === acceptingUserId)) {
+      team.members.push({
+        id: acceptingUserId,
+        name: userName,
+        email: userEmail,
+        avatar: userAvatar,
+        role: invitation.role || 'member',
+        skills: userSkills,
+        availability: 'part-time',
+        joinedAt: new Date().toISOString(),
+      });
+      this.updateTeam(team.id, { members: team.members });
+    }
+
+    invitation.status = 'accepted';
+    invitation.respondedAt = new Date().toISOString();
+
+    this.db.prepare('UPDATE team_invitations SET status = ?, data = ? WHERE id = ?')
+      .run(invitation.status, JSON.stringify(invitation), invitation.id);
+
+    this.recordTeamActivity({
+      teamId: team.id,
+      type: 'invitation_accepted',
+      actorId: acceptingUserId,
+      actorName: userName,
+      title: `${userName} accepted invitation and joined as ${invitation.role}`,
+    });
+
+    this.createInAppNotification({
+      type: 'team-event',
+      userId: team.ownerId,
+      title: 'Invitation Accepted',
+      message: `${userName} accepted your invitation to join "${team.name}".`,
+      teamId: team.id,
+    });
+
+    return { team, invitation };
+  }
+
+  declineTeamInvitation(invitationId: string, decliningUserId: string): TeamInvitation {
+    const row = this.db.prepare('SELECT data FROM team_invitations WHERE id = ?').get(invitationId) as { data: string } | undefined;
+    if (!row) throw new Error('Invitation not found');
+    const invitation = JSON.parse(row.data) as TeamInvitation;
+
+    if (invitation.status !== 'pending') {
+      throw new Error(`Invitation is already ${invitation.status}`);
+    }
+
+    const user = this.getUserSocialProfile(decliningUserId);
+    const matchesUser =
+      (invitation.inviteeUserId && invitation.inviteeUserId === decliningUserId) ||
+      (user?.email && user.email.toLowerCase() === invitation.inviteeEmail.toLowerCase()) ||
+      (user?.username && user.username.toLowerCase() === invitation.inviteeEmail.toLowerCase());
+
+    if (!matchesUser) {
+      throw new Error('Forbidden: You cannot decline an invitation intended for another user');
+    }
+
+    invitation.status = 'declined';
+    invitation.respondedAt = new Date().toISOString();
+
+    this.db.prepare('UPDATE team_invitations SET status = ?, data = ? WHERE id = ?')
+      .run(invitation.status, JSON.stringify(invitation), invitation.id);
+
+    this.recordTeamActivity({
+      teamId: invitation.teamId,
+      type: 'invitation_declined',
+      actorId: decliningUserId,
+      actorName: user?.name || 'User',
+      title: `${user?.name || 'User'} declined the invitation`,
+    });
+
+    return invitation;
+  }
+
+  cancelTeamInvitation(invitationId: string, actingUserId: string): TeamInvitation {
+    const row = this.db.prepare('SELECT data FROM team_invitations WHERE id = ?').get(invitationId) as { data: string } | undefined;
+    if (!row) throw new Error('Invitation not found');
+    const invitation = JSON.parse(row.data) as TeamInvitation;
+
+    const team = this.getTeam(invitation.teamId);
+    if (!team) throw new Error('Team not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const isOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isAdmin = actingMember?.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new Error('Forbidden: Only team owners or admins can cancel invitations');
+    }
+
+    invitation.status = 'cancelled';
+    this.db.prepare('UPDATE team_invitations SET status = ?, data = ? WHERE id = ?')
+      .run(invitation.status, JSON.stringify(invitation), invitation.id);
+
+    this.recordTeamActivity({
+      teamId: invitation.teamId,
+      type: 'invitation_cancelled',
+      actorId: actingUserId,
+      actorName: actingMember?.name || 'Admin',
+      title: `Cancelled invitation to ${invitation.inviteeName || invitation.inviteeEmail}`,
+    });
+
+    return invitation;
+  }
+
+  createJoinRequest(
+    teamId: string,
+    applicant: { userId: string; userName: string; userAvatar?: string; message: string; skills: string[] }
+  ): JoinRequest {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (team.visibility === 'private') {
+      throw new Error('Cannot request to join a private team');
+    }
+    if (team.joinPolicy === 'invitation-only') {
+      throw new Error('This team is invitation-only');
+    }
+
+    if (team.members.some((m) => m.id === applicant.userId)) {
+      throw new Error('You are already a member of this team');
+    }
+
+    const existingPending = team.joinRequests && team.joinRequests.find(
+      (r) => r.userId === applicant.userId && r.status === 'pending'
+    );
+    if (existingPending) {
+      throw new Error('You already have a pending join request for this team');
+    }
+
+    const newReq: JoinRequest = {
+      id: `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      userId: applicant.userId,
+      userName: applicant.userName,
+      userAvatar: applicant.userAvatar,
+      message: applicant.message.trim(),
+      skills: applicant.skills || [],
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    team.joinRequests = [...(team.joinRequests || []), newReq];
+    this.updateTeam(teamId, { joinRequests: team.joinRequests });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'join_requested',
+      actorId: applicant.userId,
+      actorName: applicant.userName,
+      title: `${applicant.userName} applied to join the team`,
+      description: applicant.message,
+    });
+
+    this.createInAppNotification({
+      type: 'join-request',
+      userId: team.ownerId,
+      title: 'New Team Join Request',
+      message: `${applicant.userName} requested to join "${team.name}".`,
+      teamId,
+    });
+
+    return newReq;
+  }
+
+  approveJoinRequest(teamId: string, requestId: string, actingUserId?: string): Team {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId) {
+      const actingMember = team.members.find((m) => m.id === actingUserId);
+      const isOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+      const isAdmin = actingMember?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        throw new Error('Forbidden: Only team owners or admins can approve join requests');
+      }
+    }
+
+    const reqItem = team.joinRequests.find((r) => r.id === requestId);
+    if (!reqItem) throw new Error('Join request not found');
+
+    reqItem.status = 'approved';
+
+    if (!team.members.some((m) => m.id === reqItem.userId)) {
+      team.members.push({
+        id: reqItem.userId,
+        name: reqItem.userName,
+        avatar: reqItem.userAvatar,
+        role: 'member',
+        skills: reqItem.skills || [],
+        availability: 'part-time',
+        joinedAt: new Date().toISOString(),
+      });
+    }
+
+    const updated = this.updateTeam(teamId, {
+      members: team.members,
+      joinRequests: team.joinRequests,
+    });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'join_approved',
+      actorId: actingUserId || team.ownerId,
+      actorName: actingUserId ? team.members.find((m) => m.id === actingUserId)?.name || 'Admin' : 'Admin',
+      title: `Approved ${reqItem.userName}'s join request`,
+    });
+
+    this.createInAppNotification({
+      type: 'team-event',
+      userId: reqItem.userId,
+      title: 'Join Request Approved',
+      message: `Your application to join "${team.name}" was approved! Welcome aboard.`,
+      teamId,
+    });
+
+    return updated;
+  }
+
+  rejectJoinRequest(teamId: string, requestId: string, actingUserId?: string): Team {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId) {
+      const actingMember = team.members.find((m) => m.id === actingUserId);
+      const isOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+      const isAdmin = actingMember?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        throw new Error('Forbidden: Only team owners or admins can reject join requests');
+      }
+    }
+
+    const reqItem = team.joinRequests.find((r) => r.id === requestId);
+    if (!reqItem) throw new Error('Join request not found');
+
+    reqItem.status = 'rejected';
+
+    const updated = this.updateTeam(teamId, {
+      joinRequests: team.joinRequests,
+    });
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'join_rejected',
+      actorId: actingUserId || team.ownerId,
+      actorName: actingUserId ? team.members.find((m) => m.id === actingUserId)?.name || 'Admin' : 'Admin',
+      title: `Declined ${reqItem.userName}'s join request`,
+    });
+
+    this.createInAppNotification({
+      type: 'team-event',
+      userId: reqItem.userId,
+      title: 'Join Request Declined',
+      message: `Your application to join "${team.name}" was declined.`,
+      teamId,
+    });
+
+    return updated;
+  }
+
+  shareProjectWithTeam(teamId: string, projectId: string, actingUserId: string): { team: Team; project: Project } {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    const project = this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const isProjectOwner = project.ownerId === actingUserId;
+    const isTeamOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isTeamAdmin = actingMember?.role === 'admin';
+
+    if (!isProjectOwner && !isTeamOwner && !isTeamAdmin) {
+      throw new Error('Forbidden: Only the project owner or team admins can share this project');
+    }
+
+    if (!team.projectIds.includes(projectId)) {
+      team.projectIds.push(projectId);
+      this.updateTeam(teamId, { projectIds: team.projectIds });
+    }
+
+    const currentShared: string[] = (project as any).sharedTeamIds || [];
+    if (!currentShared.includes(teamId)) {
+      currentShared.push(teamId);
+      this.updateProject(projectId, { sharedTeamIds: currentShared } as any);
+    }
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'project_shared',
+      actorId: actingUserId,
+      actorName: actingMember?.name || project.ownerName || 'Project Owner',
+      title: `Shared project "${project.title}" with the team`,
+      targetId: projectId,
+      targetTitle: project.title,
+    });
+
+    return { team, project };
+  }
+
+  unshareProjectFromTeam(teamId: string, projectId: string, actingUserId: string): { team: Team; project: Project } {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    const project = this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const isProjectOwner = project.ownerId === actingUserId;
+    const isTeamOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isTeamAdmin = actingMember?.role === 'admin';
+
+    if (!isProjectOwner && !isTeamOwner && !isTeamAdmin) {
+      throw new Error('Forbidden: Only the project owner or team admins can unshare this project');
+    }
+
+    team.projectIds = team.projectIds.filter((p) => p !== projectId);
+    this.updateTeam(teamId, { projectIds: team.projectIds });
+
+    const currentShared: string[] = ((project as any).sharedTeamIds || []).filter((t: string) => t !== teamId);
+    this.updateProject(projectId, { sharedTeamIds: currentShared } as any);
+
+    this.recordTeamActivity({
+      teamId,
+      type: 'project_unshared',
+      actorId: actingUserId,
+      actorName: actingMember?.name || project.ownerName || 'Project Owner',
+      title: `Unshared project "${project.title}" from the team`,
+      targetId: projectId,
+      targetTitle: project.title,
+    });
+
+    return { team, project };
+  }
+
+  getTeamTasks(teamId: string, actingUserId?: string): TeamTask[] {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId && team.visibility === 'private') {
+      const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+      if (!isMember) throw new Error('Forbidden: You are not a member of this private team');
+    }
+
+    const rows = this.db.prepare(`
+      SELECT data FROM team_tasks
+      WHERE team_id = ?
+      ORDER BY updated_at DESC
+    `).all(teamId) as { data: string }[];
+
+    return rows.map((r) => JSON.parse(r.data) as TeamTask);
+  }
+
+  createTeamTask(taskData: Omit<TeamTask, 'id' | 'createdAt' | 'updatedAt'>, actingUserId: string): TeamTask {
+    const team = this.getTeam(taskData.teamId);
+    if (!team) throw new Error('Team not found');
+
+    const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+    if (!isMember) throw new Error('Forbidden: Only team members can create tasks');
+
+    if (!taskData.title || !taskData.title.trim()) {
+      throw new Error('Task title is required');
+    }
+
+    const now = new Date().toISOString();
+    const task: TeamTask = {
+      ...taskData,
+      id: `ttask-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      title: taskData.title.trim(),
+      description: taskData.description?.trim() || '',
+      creatorId: actingUserId,
+      creatorName: team.members.find((m) => m.id === actingUserId)?.name || 'Team Member',
+      priority: taskData.priority || 'medium',
+      status: taskData.status || 'todo',
+      subtasks: taskData.subtasks || [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const stmt = this.db.prepare(`
+      INSERT INTO team_tasks (id, team_id, project_id, assignee_id, status, priority, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(task.id, task.teamId, task.projectId || null, task.assigneeId || null, task.status, task.priority, JSON.stringify(task), task.createdAt, task.updatedAt);
+
+    this.recordTeamActivity({
+      teamId: task.teamId,
+      type: 'task_created',
+      actorId: actingUserId,
+      actorName: task.creatorName,
+      title: `Created task "${task.title}"`,
+      targetId: task.id,
+      targetTitle: task.title,
+    });
+
+    if (task.assigneeId && task.assigneeId !== actingUserId) {
+      this.createInAppNotification({
+        type: 'team-event',
+        userId: task.assigneeId,
+        title: 'Task Assigned',
+        message: `${task.creatorName} assigned task "${task.title}" to you.`,
+        teamId: task.teamId,
+      });
+    }
+
+    return task;
+  }
+
+  updateTeamTask(taskId: string, updates: Partial<TeamTask>, actingUserId: string): TeamTask {
+    const row = this.db.prepare('SELECT data FROM team_tasks WHERE id = ?').get(taskId) as { data: string } | undefined;
+    if (!row) throw new Error('Task not found');
+    const existing = JSON.parse(row.data) as TeamTask;
+
+    const team = this.getTeam(existing.teamId);
+    if (!team) throw new Error('Team not found');
+
+    const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+    if (!isMember) throw new Error('Forbidden: Only team members can update tasks');
+
+    const oldStatus = existing.status;
+    const oldAssignee = existing.assigneeId;
+
+    const now = new Date().toISOString();
+    const updated: TeamTask = {
+      ...existing,
+      ...updates,
+      updatedAt: now,
+    };
+
+    const stmt = this.db.prepare(`
+      UPDATE team_tasks
+      SET project_id = ?, assignee_id = ?, status = ?, priority = ?, data = ?, updated_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(updated.projectId || null, updated.assigneeId || null, updated.status, updated.priority, JSON.stringify(updated), updated.updatedAt, taskId);
+
+    const actor = team.members.find((m) => m.id === actingUserId);
+
+    if (updates.status && updates.status !== oldStatus) {
+      this.recordTeamActivity({
+        teamId: updated.teamId,
+        type: 'task_status_changed',
+        actorId: actingUserId,
+        actorName: actor?.name || 'Member',
+        title: `Task "${updated.title}" marked as ${updated.status}`,
+        targetId: taskId,
+        targetTitle: updated.title,
+      });
+    }
+
+    if (updates.assigneeId && updates.assigneeId !== oldAssignee && updates.assigneeId !== actingUserId) {
+      this.recordTeamActivity({
+        teamId: updated.teamId,
+        type: 'task_assigned',
+        actorId: actingUserId,
+        actorName: actor?.name || 'Member',
+        title: `Assigned task "${updated.title}" to ${updated.assigneeName || 'contributor'}`,
+        targetId: taskId,
+        targetTitle: updated.title,
+      });
+      this.createInAppNotification({
+        type: 'team-event',
+        userId: updates.assigneeId,
+        title: 'Task Assigned',
+        message: `Task "${updated.title}" was assigned to you.`,
+        teamId: updated.teamId,
+      });
+    }
+
+    return updated;
+  }
+
+  deleteTeamTask(taskId: string, actingUserId: string): void {
+    const row = this.db.prepare('SELECT data FROM team_tasks WHERE id = ?').get(taskId) as { data: string } | undefined;
+    if (!row) return;
+    const task = JSON.parse(row.data) as TeamTask;
+
+    const team = this.getTeam(task.teamId);
+    if (!team) throw new Error('Team not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const isCreator = task.creatorId === actingUserId;
+    const isOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isAdmin = actingMember?.role === 'admin';
+
+    if (!isCreator && !isOwner && !isAdmin) {
+      throw new Error('Forbidden: Only the task creator or team admins can delete this task');
+    }
+
+    this.db.prepare('DELETE FROM team_tasks WHERE id = ?').run(taskId);
+  }
+
+  recordTeamActivity(event: Omit<TeamActivityEvent, 'id' | 'createdAt'>): TeamActivityEvent {
+    const now = new Date().toISOString();
+    const activity: TeamActivityEvent = {
+      ...event,
+      id: `act-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: now,
+    };
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO team_activities (id, team_id, type, actor_id, data, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      stmt.run(activity.id, activity.teamId, activity.type, activity.actorId, JSON.stringify(activity), activity.createdAt);
+    } catch {
+      // ignore
+    }
+    return activity;
+  }
+
+  getTeamActivities(teamId: string, actingUserId?: string, limit: number = 50): TeamActivityEvent[] {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId && team.visibility === 'private') {
+      const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+      if (!isMember) throw new Error('Forbidden: Private team activity is restricted to members');
+    }
+
+    const rows = this.db.prepare(`
+      SELECT data FROM team_activities
+      WHERE team_id = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(teamId, limit) as { data: string }[];
+
+    return rows.map((r) => JSON.parse(r.data) as TeamActivityEvent);
+  }
+
+  getTeamComments(teamId: string, options?: { projectId?: string; taskId?: string }, actingUserId?: string): TeamComment[] {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId && team.visibility === 'private') {
+      const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+      if (!isMember) throw new Error('Forbidden: You are not a member of this private team');
+    }
+
+    let query = 'SELECT data FROM team_comments WHERE team_id = ?';
+    const params: any[] = [teamId];
+    if (options?.projectId) {
+      query += ' AND project_id = ?';
+      params.push(options.projectId);
+    }
+    if (options?.taskId) {
+      query += ' AND task_id = ?';
+      params.push(options.taskId);
+    }
+    query += ' ORDER BY created_at ASC';
+
+    const rows = this.db.prepare(query).all(...params) as { data: string }[];
+    return rows.map((r) => JSON.parse(r.data) as TeamComment);
+  }
+
+  createTeamComment(commentData: Omit<TeamComment, 'id' | 'createdAt' | 'updatedAt'>, actingUserId: string): TeamComment {
+    const team = this.getTeam(commentData.teamId);
+    if (!team) throw new Error('Team not found');
+
+    const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+    if (!isMember) throw new Error('Forbidden: Only team members can post comments');
+
+    if (!commentData.content || !commentData.content.trim()) {
+      throw new Error('Comment content cannot be empty');
+    }
+    if (commentData.content.length > 2000) {
+      throw new Error('Comment content must not exceed 2000 characters');
+    }
+
+    const mentions = Array.from(commentData.content.matchAll(/@([a-zA-Z0-9_ -]+)/g)).map((m) => m[1].trim());
+
+    const now = new Date().toISOString();
+    const comment: TeamComment = {
+      ...commentData,
+      id: `comm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      content: commentData.content.trim(),
+      authorId: actingUserId,
+      authorName: team.members.find((m) => m.id === actingUserId)?.name || 'Member',
+      authorAvatar: team.members.find((m) => m.id === actingUserId)?.avatar,
+      mentions,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const stmt = this.db.prepare(`
+      INSERT INTO team_comments (id, team_id, project_id, task_id, author_id, data, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(comment.id, comment.teamId, comment.projectId || null, comment.taskId || null, comment.authorId, JSON.stringify(comment), comment.createdAt);
+
+    this.recordTeamActivity({
+      teamId: comment.teamId,
+      type: 'comment_posted',
+      actorId: actingUserId,
+      actorName: comment.authorName,
+      title: `${comment.authorName} posted a comment`,
+      description: comment.content.slice(0, 100),
+      targetId: comment.projectId || comment.taskId,
+    });
+
+    for (const mention of mentions) {
+      const mentionedMember = team.members.find(
+        (m) =>
+          m.id.toLowerCase() === mention.toLowerCase() ||
+          m.name.toLowerCase().includes(mention.toLowerCase())
+      );
+      if (mentionedMember && mentionedMember.id !== actingUserId) {
+        this.createInAppNotification({
+          type: 'team-event',
+          userId: mentionedMember.id,
+          title: 'Mentioned in Discussion',
+          message: `${comment.authorName} mentioned you in "${team.name}": "${comment.content.slice(0, 80)}"`,
+          teamId: team.id,
+        });
+      }
+    }
+
+    return comment;
+  }
+
+  deleteTeamComment(commentId: string, actingUserId: string): void {
+    const row = this.db.prepare('SELECT data FROM team_comments WHERE id = ?').get(commentId) as { data: string } | undefined;
+    if (!row) return;
+    const comment = JSON.parse(row.data) as TeamComment;
+
+    const team = this.getTeam(comment.teamId);
+    if (!team) throw new Error('Team not found');
+
+    const actingMember = team.members.find((m) => m.id === actingUserId);
+    const isAuthor = comment.authorId === actingUserId;
+    const isOwner = team.ownerId === actingUserId || actingMember?.role === 'owner';
+    const isAdmin = actingMember?.role === 'admin';
+
+    if (!isAuthor && !isOwner && !isAdmin) {
+      throw new Error('Forbidden: Only the comment author or team admins can delete this comment');
+    }
+
+    this.db.prepare('DELETE FROM team_comments WHERE id = ?').run(commentId);
+  }
+
+  getTeamAnalytics(teamId: string, actingUserId?: string): TeamAnalytics {
+    const team = this.getTeam(teamId);
+    if (!team) throw new Error('Team not found');
+
+    if (actingUserId && team.visibility === 'private') {
+      const isMember = team.ownerId === actingUserId || team.members.some((m) => m.id === actingUserId);
+      if (!isMember) throw new Error('Forbidden: Access to private team analytics is restricted to members');
+    }
+
+    const projects = team.projectIds.map((pid) => this.getProject(pid)).filter(Boolean) as Project[];
+    const activeProjects = projects.filter((p) => p.status === 'active' || p.status === 'revived');
+
+    const tasks = this.getTeamTasks(teamId);
+    const now = Date.now();
+    const completedTasks = tasks.filter((t) => t.status === 'completed');
+    const overdueTasks = tasks.filter((t) => t.status !== 'completed' && t.dueDate && new Date(t.dueDate).getTime() < now);
+
+    const taskCompletionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
+    const totalProjectProgress = projects.reduce((acc, p) => acc + (p.progress || 0), 0);
+    const averageProjectProgress = projects.length > 0 ? Math.round(totalProjectProgress / projects.length) : 0;
+
+    const activities = this.getTeamActivities(teamId, undefined, 200);
+    const comments = this.getTeamComments(teamId);
+
+    const memberContributions = team.members.map((member) => {
+      const memberCompleted = completedTasks.filter((t) => t.assigneeId === member.id).length;
+      const memberAssigned = tasks.filter((t) => t.assigneeId === member.id).length;
+      const memberProjects = projects.filter((p) => p.ownerId === member.id).length;
+      const memberComments = comments.filter((c) => c.authorId === member.id).length;
+
+      return {
+        memberId: member.id,
+        memberName: member.name,
+        memberAvatar: member.avatar,
+        role: member.role,
+        completedTasksCount: memberCompleted,
+        assignedTasksCount: memberAssigned,
+        sharedProjectsCount: memberProjects,
+        commentsCount: memberComments,
+      };
+    });
+
+    return {
+      teamId,
+      activeSharedProjects: activeProjects.length,
+      totalTasks: tasks.length,
+      completedTasks: completedTasks.length,
+      overdueTasks: overdueTasks.length,
+      taskCompletionRate,
+      averageProjectProgress,
+      recentActivitiesCount: activities.length,
+      memberContributions,
+    };
+  }
+
+  createInAppNotification(data: {
+    type: string;
+    userId: string;
+    title: string;
+    message: string;
+    teamId?: string;
+    metadata?: Record<string, unknown>;
+  }): void {
+    try {
+      const notif = {
+        id: `notif-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        type: data.type,
+        userId: data.userId,
+        title: data.title,
+        message: data.message,
+        teamId: data.teamId,
+        metadata: data.metadata,
+        read: 0,
+        createdAt: new Date().toISOString(),
+      };
+      this.db.prepare(`
+        INSERT INTO notifications (id, type, read, data, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(notif.id, notif.type, 0, JSON.stringify(notif), notif.createdAt);
+    } catch {
+      // ignore
+    }
   }
 
   // ---------------- REMINDERS ----------------

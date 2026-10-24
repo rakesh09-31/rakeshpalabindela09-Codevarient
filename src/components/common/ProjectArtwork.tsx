@@ -176,7 +176,7 @@ export function ProjectArtwork({
       {/* Bottom Technical Strip */}
       <div className="flex items-center justify-between relative z-10 pt-1.5 border-t border-black/5 dark:border-white/10 text-[9px] sm:text-[10px] font-mono text-[#57534E] dark:text-[#BDB5CC]">
         <span className="truncate max-w-[65%]">
-          {project.languages.concat(project.frameworks).slice(0, 2).join(' • ') || 'Prototype'}
+          {(project.languages || []).concat(project.frameworks || []).slice(0, 2).join(' • ') || 'Prototype'}
         </span>
         <span className="font-semibold uppercase tracking-wider">
           {project.status} • {project.progress}%

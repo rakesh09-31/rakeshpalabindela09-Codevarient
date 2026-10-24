@@ -1027,8 +1027,8 @@ export class AIService {
       if (!pB.repoUrl) missingNotes.push(`No repository link recorded for "${pB.title}"`);
       if (!pA.whyStopped) missingNotes.push(`Dormancy reason unrecorded for "${pA.title}"`);
       if (!pB.whyStopped) missingNotes.push(`Dormancy reason unrecorded for "${pB.title}"`);
-      if (pA.technicalBlockers.length === 0) missingNotes.push(`No technical blockers logged for "${pA.title}"`);
-      if (pB.technicalBlockers.length === 0) missingNotes.push(`No technical blockers logged for "${pB.title}"`);
+      if (!pA.technicalBlockers || pA.technicalBlockers.length === 0) missingNotes.push(`No technical blockers logged for "${pA.title}"`);
+      if (!pB.technicalBlockers || pB.technicalBlockers.length === 0) missingNotes.push(`No technical blockers logged for "${pB.title}"`);
 
       if (isEduDev) {
         return {
@@ -1489,7 +1489,7 @@ export class AIService {
 
     for (const project of projects) {
       // 1. Unfinished tasks in milestones
-      for (const m of project.milestones) {
+      for (const m of (project.milestones || [])) {
         const pendingTasks = (m.tasks || []).filter((t) => t.status === 'todo' || t.status === 'in-progress');
         if (pendingTasks.length > 0) {
           const t = pendingTasks[0];
